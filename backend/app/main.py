@@ -6,7 +6,7 @@ from . import models
 from .auth import hash_pw, verify_pw, create_token
 from .routers import (
     branches, expense_heads, expense_ledgers,
-    expense_entries, revenue_entries, reports
+    expense_entries, revenue_entries, reports, seed
 )
 from .schemas import LoginIn, Token
 
@@ -68,6 +68,7 @@ app.include_router(expense_ledgers.router)
 app.include_router(expense_entries.router)
 app.include_router(revenue_entries.router)
 app.include_router(reports.router)
+app.include_router(seed.router)
 
 @app.get("/")
 def root():
