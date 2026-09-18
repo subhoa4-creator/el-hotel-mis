@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-800;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-xl shadow-sm p-6 border border-slate-200;
+  }
+  .card-tight {
+    @apply bg-white rounded-lg shadow-sm p-4 border border-slate-200;
+  }
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition inline-flex items-center gap-2;
+  }
+  .btn-primary {
+    @apply bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800;
+  }
+  .btn-ghost {
+    @apply text-slate-700 hover:bg-slate-100;
+  }
+  .btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-700;
+  }
+  .input {
+    @apply w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none;
+  }
+  .label {
+    @apply block text-sm font-medium text-slate-600 mb-1;
+  }
+  .table-clean {
+    @apply w-full text-sm;
+  }
+  .table-clean th {
+    @apply text-left px-3 py-2 bg-slate-100 text-slate-600 font-medium;
+  }
+  .table-clean td {
+    @apply px-3 py-2 border-t border-slate-100;
+  }
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+  }
+  .badge-green { @apply bg-emerald-100 text-emerald-700; }
+  .badge-red   { @apply bg-rose-100 text-rose-700; }
+  .badge-blue  { @apply bg-blue-100 text-blue-700; }
+}
