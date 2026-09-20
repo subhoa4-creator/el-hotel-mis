@@ -56,9 +56,12 @@ export default function YTDSummary() {
 
       {!loading && !error && data && (
         <>
+          {/* Top KPIs */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="card">
-              <div className="text-xs text-slate-500">Total Gross Revenue</div>
+              <div className="text-xs text-slate-500">
+                Total Gross Revenue
+              </div>
               <div className="text-xl font-semibold text-blue-600">
                 {money(data.totals.gross_revenue)}
               </div>
@@ -83,13 +86,36 @@ export default function YTDSummary() {
             </div>
           </div>
 
+          {/* Fixed vs Variable totals */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="card">
+              <div className="text-xs text-slate-500">
+                Total Fixed Expenses
+              </div>
+              <div className="text-xl font-semibold text-slate-700">
+                {money(data.totals.total_fixed_expenses)}
+              </div>
+            </div>
+            <div className="card">
+              <div className="text-xs text-slate-500">
+                Total Variable Expenses
+              </div>
+              <div className="text-xl font-semibold text-slate-700">
+                {money(data.totals.total_variable_expenses)}
+              </div>
+            </div>
+          </div>
+
+          {/* Branch table */}
           <div className="card overflow-x-auto">
-            <table className="table-clean min-w-[700px]">
+            <table className="table-clean min-w-[900px]">
               <thead>
                 <tr>
                   <th>Branch</th>
                   <th className="text-right">Gross Revenue</th>
-                  <th className="text-right">Expenses</th>
+                  <th className="text-right">Fixed</th>
+                  <th className="text-right">Variable</th>
+                  <th className="text-right">Total Expenses</th>
                   <th className="text-right">Net Profit</th>
                   <th className="text-right">Occupancy</th>
                   <th className="text-right">ARR</th>
@@ -101,6 +127,12 @@ export default function YTDSummary() {
                     <td className="font-medium">{b.branch}</td>
                     <td className="text-right">
                       {money(b.gross_revenue)}
+                    </td>
+                    <td className="text-right text-slate-600">
+                      {money(b.total_fixed_expenses)}
+                    </td>
+                    <td className="text-right text-slate-600">
+                      {money(b.total_variable_expenses)}
                     </td>
                     <td className="text-right">
                       {money(b.total_expenses)}
@@ -128,6 +160,12 @@ export default function YTDSummary() {
                     {money(data.totals.gross_revenue)}
                   </td>
                   <td className="text-right">
+                    {money(data.totals.total_fixed_expenses)}
+                  </td>
+                  <td className="text-right">
+                    {money(data.totals.total_variable_expenses)}
+                  </td>
+                  <td className="text-right">
                     {money(data.totals.total_expenses)}
                   </td>
                   <td
@@ -146,6 +184,7 @@ export default function YTDSummary() {
             </table>
           </div>
 
+          {/* Per-branch expense breakdown */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {data.branches.map((b) => (
               <div key={b.branch_id} className="card">
@@ -158,6 +197,24 @@ export default function YTDSummary() {
                         <td className="text-right text-sm">{money(amt)}</td>
                       </tr>
                     ))}
+                    <tr className="font-semibold bg-slate-50">
+                      <td className="text-sm">Total</td>
+                      <td className="text-right text-sm">
+                        {money(b.total_expenses)}
+                      </td>
+                    </tr>
+                    <tr className="text-slate-600 text-sm">
+                      <td>— Fixed</td>
+                      <td className="text-right">
+                        {money(b.total_fixed_expenses)}
+                      </td>
+                    </tr>
+                    <tr className="text-slate-600 text-sm">
+                      <td>— Variable</td>
+                      <td className="text-right">
+                        {money(b.total_variable_expenses)}
+                      </td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
