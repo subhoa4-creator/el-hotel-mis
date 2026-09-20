@@ -1,6 +1,46 @@
 import { useEffect, useState } from 'react'
 import api from '../api'
 
+const money = (v) => {
+  if (v === null || v === undefined) return '—'
+  const n = Number(v)
+  if (isNaN(n)) return '—'
+  return n.toLocaleString('en-IN', { maximumFractionDigits: 0 })
+}
+
+const pct = (v) => {
+  if (v === null || v === undefined) return '—'
+  const n = Number(v)
+  if (isNaN(n)) return '—'
+  return (n * 100).toFixed(2) + '%'
+}
+
+const num = (v) => {
+  if (v === null || v === undefined) return '—'
+  const n = Number(v)
+  if (isNaN(n)) return '—'
+  return n.toFixed(2)
+}
+
+const int = (v) => {
+  if (v === null || v === undefined) return '—'
+  const n = Number(v)
+  if (isNaN(n)) return '—'
+  return n.toLocaleString('en-IN', { maximumFractionDigits: 0 })
+}
+
+const EXPENSE_HEADS = [
+  'Employee Expenses',
+  'Finance Expense',
+  'Food and Beverage Expense',
+  'Hotel / Restaurant Operating Expenses',
+  'Marketing & Sales Expenses',
+  'Miscellaneous Expenses',
+  'Rent Expense',
+  'Repair & Maintance Expenses',
+  'Traveling & Conveyance Expneses',
+]
+
 export default function YTDSummary() {
   const [year, setYear] = useState(new Date().getFullYear())
   const [data, setData] = useState(null)
@@ -19,10 +59,43 @@ export default function YTDSummary() {
       .finally(() => setLoading(false))
   }, [year])
 
-  const money = (v) =>
-    '₹' + (Number(v) || 0).toLocaleString('en-IN', {
-      maximumFractionDigits: 0,
-    })
+  if (loading) {
+    return (
+      <div className="text-center py-10 text-slate-500">Loading…</div>
+    )
+  }
+  if (error) {
+    return (
+      <div className="card border-rose-200 bg-rose-50 text-rose-700">
+        {error}
+      </div>
+    )
+  }
+  if (!data) return null
+
+  const branches = data.branches || []
+  const totals = data.totals || {}
+
+  const cols = [...branches, { ...totals, branch: 'TOTAL', branch_id: 'total' }]
+
+  const renderRow = (label, getter, formatter = money, opts = {}) => (
+    <tr key={label} className={opts.header ? 'bg-slate-100 font-semibold' : ''}>
+      <td className={opts.indent ? 'pl-6' : ''}>{label}</td>
+      {cols.map((c) => (
+        <td key={c.branch_id} className="text-right whitespace-nowrap">
+          {formatter(getter(c))}
+        </td>
+      ))}
+    </tr>
+  )
+
+  const section = (title) => (
+    <tr key={title} className="bg-slate-800 text-white">
+      <td colSpan={cols.length + 1} className="font-semibold">
+        {title}
+      </td>
+    </tr>
+  )
 
   return (
     <div className="space-y-6">
@@ -44,184 +117,85 @@ export default function YTDSummary() {
         </div>
       </div>
 
-      {loading && (
-        <div className="text-center py-10 text-slate-500">Loading…</div>
-      )}
+      <div className="card overflow-x-auto">
+        <table className="table-clean min-w-[800px]">
+          <thead>
+            <tr>
+              <th>Particulars</th>
+              {cols.map((c) => (
+                <th key={c.branch_id} className="text-right whitespace-nowrap">
+                  {c.branch}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {section('1) Revenue')}
+            {renderRow('Room Revenue', (c) => c.room_revenue)}
+            {renderRow('Restaurant / F&B Revenue', (c) => c.fnb_revenue)}
+            {renderRow('Other Income', (c) => c.other_income)}
+            {renderRow('Gross Revenue', (c) => c.gross_revenue, money, { header: true })}
+            {renderRow('Less: Discount Allowed', (c) => c.discount)}
+            {renderRow('Net Revenue', (c) => c.net_revenue, money, { header: true })}
+            {renderRow('GST Collected from Customers', (c) => c.gst)}
+            {renderRow('Total Billing Value', (c) => c.total_billing, money, { header: true })}
+            {renderRow('Pure Room Sale', (c) => c.pure_room_sale)}
+            {renderRow('Pure F&B Sale', (c) => c.pure_fnb_sale)}
 
-      {error && (
-        <div className="card border-rose-200 bg-rose-50 text-rose-700">
-          {error}
-        </div>
-      )}
+            {section('2) Expenses')}
+            {EXPENSE_HEADS.map((h) =>
+              renderRow(h, (c) => (c.expenses || {})[h] || 0)
+            )}
+            {renderRow('Total Expenses', (c) => c.total_expenses, money, { header: true })}
+            {renderRow('Net Profit/(Loss)', (c) => c.net_profit, money, { header: true })}
 
-      {!loading && !error && data && (
-        <>
-          {/* Top KPIs */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="card">
-              <div className="text-xs text-slate-500">
-                Total Gross Revenue
-              </div>
-              <div className="text-xl font-semibold text-blue-600">
-                {money(data.totals.gross_revenue)}
-              </div>
-            </div>
-            <div className="card">
-              <div className="text-xs text-slate-500">Total Expenses</div>
-              <div className="text-xl font-semibold text-amber-600">
-                {money(data.totals.total_expenses)}
-              </div>
-            </div>
-            <div className="card">
-              <div className="text-xs text-slate-500">Total Net Profit</div>
-              <div
-                className={`text-xl font-semibold ${
-                  data.totals.net_profit >= 0
-                    ? 'text-emerald-600'
-                    : 'text-rose-600'
-                }`}
-              >
-                {money(data.totals.net_profit)}
-              </div>
-            </div>
-          </div>
+            {section('3) Fixed / Variable')}
+            {renderRow('Total Fixed Expenses Excluding Rent', (c) => c.fixed_excluding_rent)}
+            {renderRow('Rent Expense', (c) => (c.expenses || {})['Rent Expense'] || 0)}
+            {renderRow('Total Fixed Expenses', (c) => c.total_fixed_expenses, money, { header: true })}
+            {renderRow('Total Variable Expenses', (c) => c.total_variable_expenses, money, { header: true })}
+            {renderRow('Loss/Profit Excluding Rent', (c) => c.loss_excluding_rent, money, { header: true })}
+            {renderRow('Total Staff Food Costing', (c) => c.staff_food_costing)}
+            {renderRow('Total Guest Food Costing', (c) => c.guest_food_costing)}
+            {renderRow('Plan Sale', (c) => c.plan_sale)}
 
-          {/* Fixed vs Variable totals */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="card">
-              <div className="text-xs text-slate-500">
-                Total Fixed Expenses
-              </div>
-              <div className="text-xl font-semibold text-slate-700">
-                {money(data.totals.total_fixed_expenses)}
-              </div>
-            </div>
-            <div className="card">
-              <div className="text-xs text-slate-500">
-                Total Variable Expenses
-              </div>
-              <div className="text-xl font-semibold text-slate-700">
-                {money(data.totals.total_variable_expenses)}
-              </div>
-            </div>
-          </div>
+            {section('4) Revenue Metrics')}
+            {renderRow('No of Days Operational', (c) => c.days_operational, int)}
+            {renderRow('No Of Room Available', (c) => c.rooms_available, int)}
+            {renderRow('Room Occupancy %', (c) => c.occupancy_pct, pct)}
+            {renderRow('Avg Room Rent', (c) => c.arr, money)}
+            {renderRow('Room Inventory', (c) => c.room_inventory, int)}
+            {renderRow('No of Pax - FnB', (c) => c.pax_fnb, int)}
+            {renderRow('Room Occupied', (c) => c.rooms_occupied, int)}
+            {renderRow('F&B Per Room', (c) => c.fnb_per_room, money)}
+            {renderRow('Running Cost of Per Room', (c) => c.running_cost_per_room, money)}
+            {renderRow('F&B Inventory', (c) => c.fb_inventory, pct)}
 
-          {/* Branch table */}
-          <div className="card overflow-x-auto">
-            <table className="table-clean min-w-[900px]">
-              <thead>
-                <tr>
-                  <th>Branch</th>
-                  <th className="text-right">Gross Revenue</th>
-                  <th className="text-right">Fixed</th>
-                  <th className="text-right">Variable</th>
-                  <th className="text-right">Total Expenses</th>
-                  <th className="text-right">Net Profit</th>
-                  <th className="text-right">Occupancy</th>
-                  <th className="text-right">ARR</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.branches.map((b) => (
-                  <tr key={b.branch_id}>
-                    <td className="font-medium">{b.branch}</td>
-                    <td className="text-right">
-                      {money(b.gross_revenue)}
-                    </td>
-                    <td className="text-right text-slate-600">
-                      {money(b.total_fixed_expenses)}
-                    </td>
-                    <td className="text-right text-slate-600">
-                      {money(b.total_variable_expenses)}
-                    </td>
-                    <td className="text-right">
-                      {money(b.total_expenses)}
-                    </td>
-                    <td
-                      className={`text-right font-medium ${
-                        (b.net_profit || 0) >= 0
-                          ? 'text-emerald-600'
-                          : 'text-rose-600'
-                      }`}
-                    >
-                      {money(b.net_profit)}
-                    </td>
-                    <td className="text-right">
-                      {(b.occupancy_pct || 0).toFixed(1)}%
-                    </td>
-                    <td className="text-right">
-                      ₹{(b.arr || 0).toFixed(0)}
-                    </td>
-                  </tr>
-                ))}
-                <tr className="bg-slate-100 font-semibold">
-                  <td>Total</td>
-                  <td className="text-right">
-                    {money(data.totals.gross_revenue)}
-                  </td>
-                  <td className="text-right">
-                    {money(data.totals.total_fixed_expenses)}
-                  </td>
-                  <td className="text-right">
-                    {money(data.totals.total_variable_expenses)}
-                  </td>
-                  <td className="text-right">
-                    {money(data.totals.total_expenses)}
-                  </td>
-                  <td
-                    className={`text-right ${
-                      (data.totals.net_profit || 0) >= 0
-                        ? 'text-emerald-600'
-                        : 'text-rose-600'
-                    }`}
-                  >
-                    {money(data.totals.net_profit)}
-                  </td>
-                  <td />
-                  <td />
-                </tr>
-              </tbody>
-            </table>
-          </div>
+            {section('5) Variance / BEP')}
+            {renderRow('Variance (F&B Sale - Variable Expenses)', (c) => c.variance_fnb)}
+            {renderRow('Variance (Room Sale - Fixed Expenses)', (c) => c.variance_room)}
+            {renderRow('Shortage/(Excess) In Room Nights For BEP', (c) => c.room_nights_shortage, int)}
+            {renderRow('Target Room Night to Achieve Break Even', (c) => c.target_room_nights, int)}
+            {renderRow('Target Room Night Percentage', (c) => c.target_room_nights_pct, pct)}
+            {renderRow('Contribution in F&B Sale against Increase Room Night', (c) => c.fnb_contribution)}
+            {renderRow('FB Revenue Percentage', (c) => c.fb_revenue_pct, pct)}
 
-          {/* Per-branch expense breakdown */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {data.branches.map((b) => (
-              <div key={b.branch_id} className="card">
-                <h3 className="font-semibold mb-3">{b.branch}</h3>
-                <table className="table-clean">
-                  <tbody>
-                    {Object.entries(b.expenses || {}).map(([head, amt]) => (
-                      <tr key={head}>
-                        <td className="text-sm">{head}</td>
-                        <td className="text-right text-sm">{money(amt)}</td>
-                      </tr>
-                    ))}
-                    <tr className="font-semibold bg-slate-50">
-                      <td className="text-sm">Total</td>
-                      <td className="text-right text-sm">
-                        {money(b.total_expenses)}
-                      </td>
-                    </tr>
-                    <tr className="text-slate-600 text-sm">
-                      <td>— Fixed</td>
-                      <td className="text-right">
-                        {money(b.total_fixed_expenses)}
-                      </td>
-                    </tr>
-                    <tr className="text-slate-600 text-sm">
-                      <td>— Variable</td>
-                      <td className="text-right">
-                        {money(b.total_variable_expenses)}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+            {section('6) Expense Ratios')}
+            {renderRow('Fixed Expense to Total Expense', (c) => c.fixed_pct, pct)}
+            {renderRow('Variable Expense To Total Expense', (c) => c.variable_pct, pct)}
+            {renderRow('Employee Cost To Total Expense', (c) => c.employee_cost_pct, pct)}
+            {renderRow('F&B Cost % of Total Expenses', (c) => c.fnb_cost_pct, pct)}
+            {renderRow('Hotel / Restaurant Operating Expenses % of Total Expense', (c) => c.hotel_opex_pct, pct)}
+            {renderRow('Rent Expense To Total Expense %', (c) => c.rent_pct, pct)}
+
+            {section('7) Expense / Revenue Ratios')}
+            {renderRow('Employee Expenses as a % of Total Revenue', (c) => c.employee_to_revenue, pct)}
+            {renderRow('Hotel / Restaurant Operating Expenses as a % of Total Revenue', (c) => c.hotel_opex_to_revenue, pct)}
+            {renderRow('Rent Expense as a % of Total Revenue', (c) => c.rent_to_revenue, pct)}
+            {renderRow('Food and Beverage Expense as a % of FnB Revenue', (c) => c.fnb_cost_to_fnb_revenue, pct)}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
