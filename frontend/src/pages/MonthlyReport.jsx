@@ -6,9 +6,38 @@ const MONTHS = [
   'July','August','September','October','November','December'
 ]
 
+const money = (v) => {
+  if (v === null || v === undefined) return '—'
+  const n = Number(v)
+  if (isNaN(n)) return '—'
+  return n.toLocaleString('en-IN', { maximumFractionDigits: 0 })
+}
+const pct = (v) => {
+  if (v === null || v === undefined) return '—'
+  const n = Number(v)
+  if (isNaN(n)) return '—'
+  return (n * 100).toFixed(2) + '%'
+}
+const int = (v) => {
+  if (v === null || v === undefined) return '—'
+  const n = Number(v)
+  if (isNaN(n)) return '—'
+  return n.toLocaleString('en-IN', { maximumFractionDigits: 0 })
+}
+
+const EXPENSE_HEADS = [
+  'Employee Expenses',
+  'Finance Expense',
+  'Food and Beverage Expense',
+  'Hotel / Restaurant Operating Expenses',
+  'Marketing & Sales Expenses',
+  'Miscellaneous Expenses',
+  'Rent Expense',
+  'Repair & Maintance Expenses',
+  'Traveling & Conveyance Expneses',
+]
+
 export default function MonthlyReport() {
-  const [branches, setBranches] = useState([])
-  const [branchId, setBranchId] = useState('')
   const [month, setMonth] = useState(new Date().getMonth() + 1)
   const [year, setYear] = useState(new Date().getFullYear())
   const [data, setData] = useState(null)
@@ -16,56 +45,63 @@ export default function MonthlyReport() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    api.get('/api/branches/').then((res) => {
-      setBranches(res.data)
-      if (res.data.length) setBranchId(res.data[0].id)
-    })
-  }, [])
-
-  useEffect(() => {
-    if (!branchId) return
     setLoading(true)
     setError('')
     api
-      .get('/api/reports/monthly', {
-        params: { branch_id: branchId, month, year },
-      })
+      .get('/api/reports/monthly', { params: { month, year } })
       .then((res) => setData(res.data))
       .catch((err) =>
         setError(err.response?.data?.detail || 'Failed to load report')
       )
       .finally(() => setLoading(false))
-  }, [branchId, month, year])
+  }, [month, year])
 
-  const money = (v) =>
-    '₹' + (Number(v) || 0).toLocaleString('en-IN', {
-      maximumFractionDigits: 0,
-    })
+  if (loading) {
+    return <div className="text-center py-10 text-slate-500">Loading…</div>
+  }
+  if (error) {
+    return (
+      <div className="card border-rose-200 bg-rose-50 text-rose-700">
+        {error}
+      </div>
+    )
+  }
+  if (!data) return null
+
+  const branches = data.branches || []
+  const totals = data.totals || {}
+  const cols = [...branches, { ...totals, branch: 'TOTAL', branch_id: 'total' }]
+
+  const row = (label, getter, fmt = money, opts = {}) => (
+    <tr key={label} className={opts.header ? 'bg-slate-100 font-semibold' : ''}>
+      <td>{label}</td>
+      {cols.map((c) => (
+        <td key={c.branch_id} className="text-right whitespace-nowrap">
+          {fmt(getter(c))}
+        </td>
+      ))}
+    </tr>
+  )
+  const section = (title) => (
+    <tr key={title} className="bg-slate-800 text-white">
+      <td colSpan={cols.length + 1} className="font-semibold">
+        {title}
+      </td>
+    </tr>
+  )
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Monthly Report</h1>
-        <p className="text-slate-500 text-sm">
-          Profit &amp; Loss for a single month
-        </p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">Monthly Report</h1>
+          <p className="text-slate-500 text-sm">
+            Profit &amp; Loss for the selected month
+          </p>
+        </div>
       </div>
 
-      <div className="card grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div>
-          <label className="label">Branch</label>
-          <select
-            className="input"
-            value={branchId}
-            onChange={(e) => setBranchId(e.target.value)}
-          >
-            {branches.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="card grid grid-cols-2 gap-4 max-w-md">
         <div>
           <label className="label">Month</label>
           <select
@@ -91,194 +127,85 @@ export default function MonthlyReport() {
         </div>
       </div>
 
-      {loading && (
-        <div className="text-center py-10 text-slate-500">Loading…</div>
-      )}
+      <div className="card overflow-x-auto">
+        <table className="table-clean min-w-[800px]">
+          <thead>
+            <tr>
+              <th>Particulars</th>
+              {cols.map((c) => (
+                <th key={c.branch_id} className="text-right whitespace-nowrap">
+                  {c.branch}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {section('1) Revenue')}
+            {row('Room Revenue', (c) => c.room_revenue)}
+            {row('Restaurant / F&B Revenue', (c) => c.fnb_revenue)}
+            {row('Other Income', (c) => c.other_income)}
+            {row('Gross Revenue', (c) => c.gross_revenue, money, { header: true })}
+            {row('Less: Discount Allowed', (c) => c.discount)}
+            {row('Net Revenue', (c) => c.net_revenue, money, { header: true })}
+            {row('GST Collected from Customers', (c) => c.gst)}
+            {row('Total Billing Value', (c) => c.total_billing, money, { header: true })}
+            {row('Pure Room Sale', (c) => c.pure_room_sale)}
+            {row('Pure F&B Sale', (c) => c.pure_fnb_sale)}
 
-      {error && (
-        <div className="card border-rose-200 bg-rose-50 text-rose-700">
-          {error}
-        </div>
-      )}
+            {section('2) Expenses')}
+            {EXPENSE_HEADS.map((h) =>
+              row(h, (c) => (c.expenses || {})[h] || 0)
+            )}
+            {row('Total Expenses', (c) => c.total_expenses, money, { header: true })}
+            {row('Net Profit/(Loss)', (c) => c.net_profit, money, { header: true })}
 
-      {!loading && !error && data && (
-        <>
-          {/* Top KPIs */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="card">
-              <div className="text-xs text-slate-500">Gross Revenue</div>
-              <div className="text-xl font-semibold text-blue-600">
-                {money(data.gross_revenue)}
-              </div>
-            </div>
-            <div className="card">
-              <div className="text-xs text-slate-500">Total Expenses</div>
-              <div className="text-xl font-semibold text-amber-600">
-                {money(data.total_expenses)}
-              </div>
-            </div>
-            <div className="card">
-              <div className="text-xs text-slate-500">Net Profit</div>
-              <div
-                className={`text-xl font-semibold ${
-                  data.net_profit >= 0
-                    ? 'text-emerald-600'
-                    : 'text-rose-600'
-                }`}
-              >
-                {money(data.net_profit)}
-              </div>
-            </div>
-          </div>
+            {section('3) Fixed / Variable')}
+            {row('Total Fixed Expenses Excluding Rent', (c) => c.fixed_excluding_rent)}
+            {row('Rent Expense', (c) => (c.expenses || {})['Rent Expense'] || 0)}
+            {row('Total Fixed Expenses', (c) => c.total_fixed_expenses, money, { header: true })}
+            {row('Total Variable Expenses', (c) => c.total_variable_expenses, money, { header: true })}
+            {row('Loss/Profit Excluding Rent', (c) => c.loss_excluding_rent, money, { header: true })}
+            {row('Total Staff Food Costing', (c) => c.staff_food_costing)}
+            {row('Total Guest Food Costing', (c) => c.guest_food_costing)}
+            {row('Plan Sale', (c) => c.plan_sale)}
 
-          {/* Fixed vs Variable KPIs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="card">
-              <div className="text-xs text-slate-500">
-                Total Fixed Expenses
-              </div>
-              <div className="text-xl font-semibold text-slate-700">
-                {money(data.total_fixed_expenses)}
-              </div>
-            </div>
-            <div className="card">
-              <div className="text-xs text-slate-500">
-                Total Variable Expenses
-              </div>
-              <div className="text-xl font-semibold text-slate-700">
-                {money(data.total_variable_expenses)}
-              </div>
-            </div>
-          </div>
+            {section('4) Revenue Metrics')}
+            {row('No of Days Operational', (c) => c.days_operational, int)}
+            {row('No Of Room Available', (c) => c.rooms_available, int)}
+            {row('Room Occupancy %', (c) => c.occupancy_pct, pct)}
+            {row('Avg Room Rent', (c) => c.arr, money)}
+            {row('Room Inventory', (c) => c.room_inventory, int)}
+            {row('No of Pax - FnB', (c) => c.pax_fnb, int)}
+            {row('Room Occupied', (c) => c.rooms_occupied, int)}
+            {row('F&B Per Room', (c) => c.fnb_per_room, money)}
+            {row('Running Cost of Per Room', (c) => c.running_cost_per_room, money)}
+            {row('F&B Inventory', (c) => c.fb_inventory, pct)}
 
-          {/* Revenue table */}
-          <div className="card">
-            <h3 className="font-semibold mb-3">Revenue</h3>
-            <table className="table-clean">
-              <tbody>
-                <tr>
-                  <td>Room Revenue</td>
-                  <td className="text-right">
-                    {money(data.revenue.room_revenue)}
-                  </td>
-                </tr>
-                <tr>
-                  <td>Restaurant / F&amp;B Revenue</td>
-                  <td className="text-right">
-                    {money(data.revenue.fnb_revenue)}
-                  </td>
-                </tr>
-                <tr>
-                  <td>Other Income</td>
-                  <td className="text-right">
-                    {money(data.revenue.other_income)}
-                  </td>
-                </tr>
-                <tr className="font-semibold">
-                  <td>Gross Revenue</td>
-                  <td className="text-right">
-                    {money(data.gross_revenue)}
-                  </td>
-                </tr>
-                <tr>
-                  <td>Less: Discount Allowed</td>
-                  <td className="text-right text-rose-600">
-                    − {money(data.revenue.discount)}
-                  </td>
-                </tr>
-                <tr className="font-semibold">
-                  <td>Net Revenue</td>
-                  <td className="text-right">
-                    {money(data.net_revenue)}
-                  </td>
-                </tr>
-                <tr>
-                  <td>GST Collected</td>
-                  <td className="text-right">
-                    {money(data.revenue.gst)}
-                  </td>
-                </tr>
-                <tr className="font-semibold">
-                  <td>Total Billing Value</td>
-                  <td className="text-right">
-                    {money(data.total_billing)}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+            {section('5) Variance / BEP')}
+            {row('Variance (F&B Sale - Variable Expenses)', (c) => c.variance_fnb)}
+            {row('Variance (Room Sale - Fixed Expenses)', (c) => c.variance_room)}
+            {row('Shortage/(Excess) In Room Nights For BEP', (c) => c.room_nights_shortage, int)}
+            {row('Target Room Night to Achieve Break Even', (c) => c.target_room_nights, int)}
+            {row('Target Room Night Percentage', (c) => c.target_room_nights_pct, pct)}
+            {row('Contribution in F&B Sale against Increase Room Night', (c) => c.fnb_contribution)}
+            {row('FB Revenue Percentage', (c) => c.fb_revenue_pct, pct)}
 
-          {/* Expense heads table with F/V split */}
-          <div className="card">
-            <h3 className="font-semibold mb-3">Expenses by Head</h3>
-            <table className="table-clean">
-              <tbody>
-                {Object.entries(data.expenses).map(([head, amt]) => (
-                  <tr key={head}>
-                    <td>{head}</td>
-                    <td className="text-right">{money(amt)}</td>
-                  </tr>
-                ))}
-                <tr className="font-semibold bg-slate-50">
-                  <td>Total Expenses</td>
-                  <td className="text-right">
-                    {money(data.total_expenses)}
-                  </td>
-                </tr>
-                <tr className="text-slate-600">
-                  <td>— of which Fixed</td>
-                  <td className="text-right">
-                    {money(data.total_fixed_expenses)}
-                  </td>
-                </tr>
-                <tr className="text-slate-600">
-                  <td>— of which Variable</td>
-                  <td className="text-right">
-                    {money(data.total_variable_expenses)}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+            {section('6) Expense Ratios')}
+            {row('Fixed Expense to Total Expense', (c) => c.fixed_pct, pct)}
+            {row('Variable Expense To Total Expense', (c) => c.variable_pct, pct)}
+            {row('Employee Cost To Total Expense', (c) => c.employee_cost_pct, pct)}
+            {row('F&B Cost % of Total Expenses', (c) => c.fnb_cost_pct, pct)}
+            {row('Hotel / Restaurant Operating Expenses % of Total Expense', (c) => c.hotel_opex_pct, pct)}
+            {row('Rent Expense To Total Expense %', (c) => c.rent_pct, pct)}
 
-          {/* Key metrics */}
-          <div className="card">
-            <h3 className="font-semibold mb-3">Key Metrics</h3>
-            <table className="table-clean">
-              <tbody>
-                <tr>
-                  <td>Occupancy</td>
-                  <td className="text-right">
-                    {(data.occupancy_pct || 0).toFixed(1)}%
-                  </td>
-                </tr>
-                <tr>
-                  <td>Average Room Rent</td>
-                  <td className="text-right">
-                    ₹{(data.arr || 0).toFixed(0)}
-                  </td>
-                </tr>
-                <tr>
-                  <td>Rooms Available</td>
-                  <td className="text-right">
-                    {data.revenue.rooms_available}
-                  </td>
-                </tr>
-                <tr>
-                  <td>Rooms Occupied</td>
-                  <td className="text-right">
-                    {data.revenue.rooms_occupied}
-                  </td>
-                </tr>
-                <tr>
-                  <td>FnB Pax</td>
-                  <td className="text-right">{data.revenue.pax_fnb}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
+            {section('7) Expense / Revenue Ratios')}
+            {row('Employee Expenses as a % of Total Revenue', (c) => c.employee_to_revenue, pct)}
+            {row('Hotel / Restaurant Operating Expenses as a % of Total Revenue', (c) => c.hotel_opex_to_revenue, pct)}
+            {row('Rent Expense as a % of Total Revenue', (c) => c.rent_to_revenue, pct)}
+            {row('Food and Beverage Expense as a % of FnB Revenue', (c) => c.fnb_cost_to_fnb_revenue, pct)}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
