@@ -9,6 +9,9 @@ import Comparison from './pages/Comparison'
 import YTDSummary from './pages/YTDSummary'
 import Ledgers from './pages/Ledgers'
 import Branches from './pages/Branches'
+import FoodCost from './pages/FoodCost'
+import PlanSale from './pages/PlanSale'
+import CostPerRoom from './pages/CostPerRoom'
 
 function Protected({ children }) {
   const token = localStorage.getItem('token')
@@ -28,6 +31,9 @@ export default function App() {
         <Route path="ytd" element={<YTDSummary />} />
         <Route path="ledgers" element={<Ledgers />} />
         <Route path="branches" element={<Branches />} />
+        <Route path="food-cost" element={<FoodCost />} />
+        <Route path="plan-sale" element={<PlanSale />} />
+        <Route path="cost-per-room" element={<CostPerRoom />} />
       </Route>
     </Routes>
   )
