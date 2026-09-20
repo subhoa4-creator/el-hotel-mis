@@ -13,6 +13,7 @@ const links = [
   { to: '/app/all-fy', label: 'All FY' },
   { to: '/app/ledgers', label: 'Ledgers' },
   { to: '/app/branches', label: 'Branches' },
+  { to: '/app/room-history', label: 'Room History' },
   { to: '/app/cost-per-room', label: 'Cost per Room' },
 ]
 
