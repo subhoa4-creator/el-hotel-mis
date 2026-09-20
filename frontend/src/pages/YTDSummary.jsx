@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import api from '../api'
+import ExportButtons from '../components/ExportButtons'
 
 const money = (v) => {
   if (v === null || v === undefined) return '—'
@@ -90,26 +91,36 @@ export default function YTDSummary() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold">YTD Summary</h1>
           <p className="text-slate-500 text-sm">
             Financial Year {fyLabel} · Apr {fyYear} → Mar {fyYear + 1}
           </p>
         </div>
-        <div>
-          <label className="label">Financial Year</label>
-          <select
-            className="input w-40"
-            value={fyYear}
-            onChange={(e) => setFyYear(Number(e.target.value))}
-          >
-            {[fyYear - 2, fyYear - 1, fyYear, fyYear + 1].map((y) => (
-              <option key={y} value={y}>
-                {y}-{(y + 1) % 100}
-              </option>
-            ))}
-          </select>
+        <div className="flex items-end gap-3 flex-wrap">
+          <div>
+            <label className="label">Financial Year</label>
+            <select
+              className="input w-40"
+              value={fyYear}
+              onChange={(e) => setFyYear(Number(e.target.value))}
+            >
+              {[fyYear - 2, fyYear - 1, fyYear, fyYear + 1].map((y) => (
+                <option key={y} value={y}>
+                  {y}-{(y + 1) % 100}
+                </option>
+              ))}
+            </select>
+          </div>
+          <ExportButtons
+            endpoints={{
+              excel: '/api/export/excel/ytd',
+              pdf: '/api/export/pdf/ytd',
+            }}
+            params={{ year: fyYear }}
+            filename={`ElHotelMIS_YTD_${fyLabel}`}
+          />
         </div>
       </div>
 
