@@ -13,6 +13,7 @@ import Branches from './pages/Branches'
 import FoodCost from './pages/FoodCost'
 import PlanSale from './pages/PlanSale'
 import CostPerRoom from './pages/CostPerRoom'
+import RoomHistory from './pages/RoomHistory'
 
 function Protected({ children }) {
   const token = localStorage.getItem('token')
@@ -35,6 +36,7 @@ export default function App() {
         <Route path="all-fy" element={<AllFY />} />
         <Route path="ledgers" element={<Ledgers />} />
         <Route path="branches" element={<Branches />} />
+        <Route path="room-history" element={<RoomHistory />} />
         <Route path="cost-per-room" element={<CostPerRoom />} />
       </Route>
     </Routes>
