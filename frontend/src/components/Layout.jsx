@@ -5,11 +5,14 @@ const links = [
   { to: '/app', label: 'Dashboard', end: true },
   { to: '/app/expenses', label: 'Expense Entry' },
   { to: '/app/revenue', label: 'Revenue Entry' },
+  { to: '/app/food-cost', label: 'Food Cost' },
+  { to: '/app/plan-sale', label: 'Plan Sale' },
   { to: '/app/monthly', label: 'Monthly Report' },
   { to: '/app/comparison', label: 'Comparison' },
   { to: '/app/ytd', label: 'YTD Summary' },
   { to: '/app/ledgers', label: 'Ledgers' },
   { to: '/app/branches', label: 'Branches' },
+  { to: '/app/cost-per-room', label: 'Cost per Room' },
 ]
 
 export default function Layout() {
@@ -69,12 +72,10 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen flex bg-slate-50">
-      {/* Desktop sidebar */}
       <aside className="hidden md:flex w-60 bg-slate-900 flex-col">
         <SidebarContent />
       </aside>
 
-      {/* Mobile sidebar (drawer) */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 flex md:hidden">
           <div
@@ -87,7 +88,6 @@ export default function Layout() {
         </div>
       )}
 
-      {/* Main area */}
       <div className="flex-1 flex flex-col">
         <header className="md:hidden bg-slate-900 text-white px-4 py-3 flex items-center justify-between">
           <button
