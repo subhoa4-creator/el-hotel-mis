@@ -14,6 +14,7 @@ import FoodCost from './pages/FoodCost'
 import PlanSale from './pages/PlanSale'
 import CostPerRoom from './pages/CostPerRoom'
 import RoomHistory from './pages/RoomHistory'
+import Users from './pages/Users'
 
 function Protected({ children }) {
   const token = localStorage.getItem('token')
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="branches" element={<Branches />} />
         <Route path="room-history" element={<RoomHistory />} />
         <Route path="cost-per-room" element={<CostPerRoom />} />
+        <Route path="users" element={<Users />} />
       </Route>
     </Routes>
   )
