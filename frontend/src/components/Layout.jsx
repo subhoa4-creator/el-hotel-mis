@@ -10,6 +10,7 @@ const links = [
   { to: '/app/monthly', label: 'Monthly Report' },
   { to: '/app/comparison', label: 'Comparison' },
   { to: '/app/ytd', label: 'YTD Summary' },
+  { to: '/app/all-fy', label: 'All FY' },
   { to: '/app/ledgers', label: 'Ledgers' },
   { to: '/app/branches', label: 'Branches' },
   { to: '/app/cost-per-room', label: 'Cost per Room' },
