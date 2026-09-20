@@ -62,6 +62,7 @@ export default function Dashboard() {
         </p>
       </div>
 
+      {/* Main KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPI
           title="Gross Revenue"
@@ -89,18 +90,53 @@ export default function Dashboard() {
         />
       </div>
 
+      {/* Fixed / Variable KPIs */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <KPI
+          title="Total Fixed Expenses (YTD)"
+          value={totals.total_fixed_expenses}
+          accent="slate"
+          subtitle={
+            totals.total_expenses
+              ? `${(
+                  (totals.total_fixed_expenses /
+                    totals.total_expenses) *
+                  100
+                ).toFixed(1)}% of total expenses`
+              : ''
+          }
+        />
+        <KPI
+          title="Total Variable Expenses (YTD)"
+          value={totals.total_variable_expenses}
+          accent="slate"
+          subtitle={
+            totals.total_expenses
+              ? `${(
+                  (totals.total_variable_expenses /
+                    totals.total_expenses) *
+                  100
+                ).toFixed(1)}% of total expenses`
+              : ''
+          }
+        />
+      </div>
+
+      {/* Branch performance */}
       <div className="card">
         <h2 className="font-semibold text-lg mb-4">Branch Performance</h2>
         {sorted.length === 0 ? (
           <p className="text-slate-500 text-sm">No branch data yet.</p>
         ) : (
           <div className="overflow-x-auto -mx-6 px-6">
-            <table className="table-clean min-w-[500px]">
+            <table className="table-clean min-w-[800px]">
               <thead>
                 <tr>
                   <th>Branch</th>
                   <th className="text-right">Gross Revenue</th>
-                  <th className="text-right">Expenses</th>
+                  <th className="text-right">Fixed</th>
+                  <th className="text-right">Variable</th>
+                  <th className="text-right">Total Expenses</th>
                   <th className="text-right">Net Profit</th>
                   <th className="text-right">Occupancy</th>
                 </tr>
@@ -111,6 +147,16 @@ export default function Dashboard() {
                     <td className="font-medium">{b.branch}</td>
                     <td className="text-right">
                       ₹{(b.gross_revenue || 0).toLocaleString('en-IN')}
+                    </td>
+                    <td className="text-right text-slate-600">
+                      ₹
+                      {(b.total_fixed_expenses || 0).toLocaleString('en-IN')}
+                    </td>
+                    <td className="text-right text-slate-600">
+                      ₹
+                      {(b.total_variable_expenses || 0).toLocaleString(
+                        'en-IN'
+                      )}
                     </td>
                     <td className="text-right">
                       ₹{(b.total_expenses || 0).toLocaleString('en-IN')}
