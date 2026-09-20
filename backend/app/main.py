@@ -9,7 +9,7 @@ from .routers import (
     branches, expense_heads, expense_ledgers,
     expense_entries, revenue_entries, reports, seed,
     food_cost, plan_sale, room_history,
-    export_excel, export_pdf
+    export_excel, export_pdf, users
 )
 from .schemas import LoginIn, Token
 
@@ -93,6 +93,7 @@ app.include_router(plan_sale.router)
 app.include_router(room_history.router)
 app.include_router(export_excel.router)
 app.include_router(export_pdf.router)
+app.include_router(users.router)
 
 
 @app.get("/")
