@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 
-const links = [
+const ALL_LINKS = [
   { to: '/app', label: 'Dashboard', end: true },
   { to: '/app/expenses', label: 'Expense Entry' },
   { to: '/app/revenue', label: 'Revenue Entry' },
@@ -15,12 +15,16 @@ const links = [
   { to: '/app/branches', label: 'Branches' },
   { to: '/app/room-history', label: 'Room History' },
   { to: '/app/cost-per-room', label: 'Cost per Room' },
+  { to: '/app/users', label: 'Users', adminOnly: true },
 ]
 
 export default function Layout() {
   const nav = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const user = JSON.parse(localStorage.getItem('user') || '{}')
+  const isAdmin = user.role === 'admin'
+
+  const links = ALL_LINKS.filter((l) => !l.adminOnly || isAdmin)
 
   const logout = () => {
     localStorage.removeItem('token')
@@ -60,7 +64,7 @@ export default function Layout() {
           <div className="font-medium text-slate-200">
             {user.name || 'User'}
           </div>
-          <div>{user.role || 'viewer'}</div>
+          <div className="capitalize">{user.role || 'viewer'}</div>
         </div>
         <button
           onClick={logout}
