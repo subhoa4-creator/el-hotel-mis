@@ -103,6 +103,7 @@ export default function MonthlyReport() {
 
       {!loading && !error && data && (
         <>
+          {/* Top KPIs */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="card">
               <div className="text-xs text-slate-500">Gross Revenue</div>
@@ -130,6 +131,27 @@ export default function MonthlyReport() {
             </div>
           </div>
 
+          {/* Fixed vs Variable KPIs */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="card">
+              <div className="text-xs text-slate-500">
+                Total Fixed Expenses
+              </div>
+              <div className="text-xl font-semibold text-slate-700">
+                {money(data.total_fixed_expenses)}
+              </div>
+            </div>
+            <div className="card">
+              <div className="text-xs text-slate-500">
+                Total Variable Expenses
+              </div>
+              <div className="text-xl font-semibold text-slate-700">
+                {money(data.total_variable_expenses)}
+              </div>
+            </div>
+          </div>
+
+          {/* Revenue table */}
           <div className="card">
             <h3 className="font-semibold mb-3">Revenue</h3>
             <table className="table-clean">
@@ -186,8 +208,9 @@ export default function MonthlyReport() {
             </table>
           </div>
 
+          {/* Expense heads table with F/V split */}
           <div className="card">
-            <h3 className="font-semibold mb-3">Expenses</h3>
+            <h3 className="font-semibold mb-3">Expenses by Head</h3>
             <table className="table-clean">
               <tbody>
                 {Object.entries(data.expenses).map(([head, amt]) => (
@@ -196,16 +219,29 @@ export default function MonthlyReport() {
                     <td className="text-right">{money(amt)}</td>
                   </tr>
                 ))}
-                <tr className="font-semibold">
+                <tr className="font-semibold bg-slate-50">
                   <td>Total Expenses</td>
                   <td className="text-right">
                     {money(data.total_expenses)}
+                  </td>
+                </tr>
+                <tr className="text-slate-600">
+                  <td>— of which Fixed</td>
+                  <td className="text-right">
+                    {money(data.total_fixed_expenses)}
+                  </td>
+                </tr>
+                <tr className="text-slate-600">
+                  <td>— of which Variable</td>
+                  <td className="text-right">
+                    {money(data.total_variable_expenses)}
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
 
+          {/* Key metrics */}
           <div className="card">
             <h3 className="font-semibold mb-3">Key Metrics</h3>
             <table className="table-clean">
