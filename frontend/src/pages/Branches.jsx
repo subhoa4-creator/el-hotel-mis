@@ -10,6 +10,8 @@ const EMPTY_BRANCH = {
   housekeeping: 0,
   home_amenities: 0,
   is_head_office: 0,
+  start_date: '',
+  running_cost_per_room: 0,
 }
 
 export default function Branches() {
@@ -38,14 +40,18 @@ export default function Branches() {
   }, [])
 
   const startAdd = () => {
-    setForm(EMPTY_BRANCH)
+    setForm({ ...EMPTY_BRANCH, start_date: '2026-04-01' })
     setEditingId(null)
     setShowAdd(true)
     setMessage('')
   }
 
   const startEdit = (branch) => {
-    setForm({ ...branch })
+    setForm({
+      ...branch,
+      start_date: branch.start_date || '',
+      running_cost_per_room: branch.running_cost_per_room || 0,
+    })
     setEditingId(branch.id)
     setShowAdd(false)
     setMessage('')
@@ -75,6 +81,8 @@ export default function Branches() {
         housekeeping: Number(form.housekeeping) || 0,
         home_amenities: Number(form.home_amenities) || 0,
         is_head_office: Number(form.is_head_office) || 0,
+        start_date: form.start_date || null,
+        running_cost_per_room: Number(form.running_cost_per_room) || 0,
       }
       if (editingId) {
         await api.put(`/api/branches/${editingId}`, payload)
@@ -96,7 +104,11 @@ export default function Branches() {
   }
 
   const remove = async (branch) => {
-    if (!window.confirm(`Delete branch "${branch.name}"? This cannot be undone.`))
+    if (
+      !window.confirm(
+        `Delete branch "${branch.name}"? This cannot be undone.`
+      )
+    )
       return
     try {
       await api.delete(`/api/branches/${branch.id}`)
@@ -104,14 +116,13 @@ export default function Branches() {
       setMessage('✓ Branch deleted')
       setTimeout(() => setMessage(''), 2500)
     } catch (err) {
-      setMessage(
-        '✗ ' + (err.response?.data?.detail || 'Failed to delete')
-      )
+      setMessage('✗ ' + (err.response?.data?.detail || 'Failed to delete'))
     }
   }
 
   const money = (v) =>
-    '₹' + (Number(v) || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })
+    '₹' +
+    (Number(v) || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })
 
   return (
     <div className="space-y-6">
@@ -119,7 +130,7 @@ export default function Branches() {
         <div>
           <h1 className="text-2xl font-bold">Branches</h1>
           <p className="text-slate-500 text-sm">
-            Manage branches and their cost parameters
+            Manage branches, start dates, and cost parameters
           </p>
         </div>
         {!showAdd && !editingId && (
@@ -139,7 +150,6 @@ export default function Branches() {
         </div>
       )}
 
-      {/* Add / Edit form */}
       {(showAdd || editingId) && (
         <div className="card border-blue-200 bg-blue-50/40">
           <h3 className="font-semibold mb-3">
@@ -156,12 +166,14 @@ export default function Branches() {
               />
             </div>
             <div>
-              <label className="label">No. of Rooms</label>
+              <label className="label">Start Date</label>
               <input
-                type="number"
+                type="date"
                 className="input"
-                value={form.rooms}
-                onChange={(e) => setForm({ ...form, rooms: e.target.value })}
+                value={form.start_date || ''}
+                onChange={(e) =>
+                  setForm({ ...form, start_date: e.target.value })
+                }
               />
             </div>
             <div>
@@ -176,6 +188,15 @@ export default function Branches() {
                 <option value={0}>No (regular branch)</option>
                 <option value={1}>Yes (Head Office)</option>
               </select>
+            </div>
+            <div>
+              <label className="label">No. of Rooms</label>
+              <input
+                type="number"
+                className="input"
+                value={form.rooms}
+                onChange={(e) => setForm({ ...form, rooms: e.target.value })}
+              />
             </div>
             <div>
               <label className="label">Monthly Rent</label>
@@ -203,7 +224,9 @@ export default function Branches() {
                 type="number"
                 className="input"
                 value={form.dg_cost}
-                onChange={(e) => setForm({ ...form, dg_cost: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, dg_cost: e.target.value })
+                }
               />
             </div>
             <div>
@@ -228,6 +251,20 @@ export default function Branches() {
                 }
               />
             </div>
+            <div>
+              <label className="label">Running Cost per Room</label>
+              <input
+                type="number"
+                className="input"
+                value={form.running_cost_per_room}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    running_cost_per_room: e.target.value,
+                  })
+                }
+              />
+            </div>
           </div>
           <div className="mt-4 flex justify-end gap-2">
             <button onClick={cancel} className="btn btn-ghost">
@@ -244,7 +281,6 @@ export default function Branches() {
         </div>
       )}
 
-      {/* Branch list */}
       {loading ? (
         <div className="text-center py-10 text-slate-500">
           Loading branches…
@@ -255,16 +291,14 @@ export default function Branches() {
         </div>
       ) : (
         <div className="card overflow-x-auto">
-          <table className="table-clean min-w-[800px]">
+          <table className="table-clean min-w-[900px]">
             <thead>
               <tr>
                 <th>Name</th>
+                <th>Start Date</th>
                 <th className="text-right">Rooms</th>
                 <th className="text-right">Rent</th>
-                <th className="text-right">Electricity</th>
-                <th className="text-right">DG</th>
-                <th className="text-right">Housekeeping</th>
-                <th className="text-right">Amenities/Room</th>
+                <th className="text-right">Running/Room</th>
                 <th className="text-center">Actions</th>
               </tr>
             </thead>
@@ -277,12 +311,14 @@ export default function Branches() {
                       <span className="badge badge-blue ml-2">HO</span>
                     ) : null}
                   </td>
+                  <td className="text-slate-600">
+                    {b.start_date || '—'}
+                  </td>
                   <td className="text-right">{b.rooms}</td>
                   <td className="text-right">{money(b.rent)}</td>
-                  <td className="text-right">{money(b.electricity)}</td>
-                  <td className="text-right">{money(b.dg_cost)}</td>
-                  <td className="text-right">{money(b.housekeeping)}</td>
-                  <td className="text-right">{money(b.home_amenities)}</td>
+                  <td className="text-right">
+                    {money(b.running_cost_per_room)}
+                  </td>
                   <td className="text-center whitespace-nowrap">
                     <button
                       onClick={() => startEdit(b)}
