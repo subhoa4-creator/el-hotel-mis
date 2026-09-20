@@ -6,15 +6,20 @@ const MONTHS = [
   'July','August','September','October','November','December'
 ]
 
+const daysInMonth = (year, month) => {
+  // month: 1-12
+  return new Date(year, month, 0).getDate()
+}
+
 const FIELDS = [
-  { key: 'room_revenue',   label: 'Room Revenue',           type: 'money' },
-  { key: 'fnb_revenue',    label: 'Restaurant / F&B Revenue', type: 'money' },
-  { key: 'other_income',   label: 'Other Income',           type: 'money' },
-  { key: 'discount',       label: 'Less: Discount Allowed', type: 'money' },
-  { key: 'gst',            label: 'GST Collected',          type: 'money' },
-  { key: 'rooms_available',label: 'No. of Rooms Available', type: 'int' },
-  { key: 'rooms_occupied', label: 'Rooms Occupied',         type: 'int' },
-  { key: 'pax_fnb',        label: 'No. of Pax - FnB',       type: 'int' },
+  { key: 'room_revenue', label: 'Room Revenue', type: 'money' },
+  { key: 'fnb_revenue', label: 'Restaurant / F&B Revenue', type: 'money' },
+  { key: 'other_income', label: 'Other Income', type: 'money' },
+  { key: 'discount', label: 'Less: Discount Allowed', type: 'money' },
+  { key: 'gst', label: 'GST Collected', type: 'money' },
+  // rooms_available is now auto-computed — NOT user input
+  { key: 'rooms_occupied', label: 'Rooms Occupied', type: 'int' },
+  { key: 'pax_fnb', label: 'No. of Pax - FnB', type: 'int' },
 ]
 
 export default function RevenueEntry() {
@@ -52,6 +57,12 @@ export default function RevenueEntry() {
       .finally(() => setLoading(false))
   }, [branchId, month, year])
 
+  const currentBranch = branches.find((b) => b.id === Number(branchId))
+  const days = daysInMonth(year, month)
+  const autoRoomsAvailable = currentBranch
+    ? Number(currentBranch.rooms || 0) * days
+    : 0
+
   const handleChange = (key, value) => {
     setForm((prev) => ({
       ...prev,
@@ -68,6 +79,8 @@ export default function RevenueEntry() {
         branch_id: Number(branchId),
         month: Number(month),
         year: Number(year),
+        // rooms_available is set to auto-computed value
+        rooms_available: autoRoomsAvailable,
       }
       FIELDS.forEach((f) => {
         payload[f.key] = Number(form[f.key]) || 0
@@ -90,6 +103,12 @@ export default function RevenueEntry() {
   const disc = Number(form.discount) || 0
   const gross = roomRev + fnbRev + other
   const net = gross - disc
+
+  const roomsOccupied = Number(form.rooms_occupied) || 0
+  const occupancy =
+    autoRoomsAvailable > 0
+      ? ((roomsOccupied / autoRoomsAvailable) * 100).toFixed(2) + '%'
+      : '—'
 
   return (
     <div className="space-y-6">
@@ -148,22 +167,30 @@ export default function RevenueEntry() {
         <>
           <div className="card space-y-3">
             {FIELDS.map((f) => (
-              <div
-                key={f.key}
-                className="flex items-center gap-3 py-1"
-              >
+              <div key={f.key} className="flex items-center gap-3 py-1">
                 <label className="flex-1 text-sm">{f.label}</label>
                 <input
                   type="number"
                   className="input w-40 text-right"
                   value={form[f.key] ?? ''}
-                  onChange={(e) =>
-                    handleChange(f.key, e.target.value)
-                  }
+                  onChange={(e) => handleChange(f.key, e.target.value)}
                   placeholder="0"
                 />
               </div>
             ))}
+
+            {/* Read-only auto-computed rooms available */}
+            <div className="flex items-center gap-3 py-1 bg-slate-50 rounded px-2">
+              <label className="flex-1 text-sm">
+                No. of Rooms Available{' '}
+                <span className="text-slate-400 text-xs">
+                  ({currentBranch?.rooms || 0} rooms × {days} days = auto)
+                </span>
+              </label>
+              <div className="input w-40 text-right bg-slate-100 text-slate-600">
+                {autoRoomsAvailable.toLocaleString('en-IN')}
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -181,17 +208,9 @@ export default function RevenueEntry() {
             </div>
             <div className="card-tight">
               <div className="text-xs text-slate-500">
-                Occupancy
+                Occupancy (auto)
               </div>
-              <div className="text-lg font-semibold">
-                {form.rooms_available
-                  ? (
-                      (Number(form.rooms_occupied) /
-                        Number(form.rooms_available)) *
-                      100
-                    ).toFixed(1) + '%'
-                  : '—'}
-              </div>
+              <div className="text-lg font-semibold">{occupancy}</div>
             </div>
           </div>
 
