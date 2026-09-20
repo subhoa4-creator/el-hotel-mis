@@ -22,6 +22,19 @@ class BranchOut(BranchIn):
         from_attributes = True
 
 
+class RoomHistoryIn(BaseModel):
+    branch_id: int
+    from_date: date
+    rooms: int
+    notes: Optional[str] = None
+
+
+class RoomHistoryOut(RoomHistoryIn):
+    id: int
+    class Config:
+        from_attributes = True
+
+
 class ExpenseHeadIn(BaseModel):
     name: str
 
