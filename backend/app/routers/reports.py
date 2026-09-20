@@ -109,11 +109,6 @@ def _plan_sale(db, branch_id, month=None, year=None):
 
 
 def _days_operational(branch, month=None, year=None):
-    """Return days operational for the branch.
-    - Head Office: always 0
-    - Monthly: days in the selected month (if after start_date)
-    - YTD: days from start_date to today
-    """
     if branch.is_head_office:
         return 0
     if not branch.start_date:
@@ -122,20 +117,17 @@ def _days_operational(branch, month=None, year=None):
     today = date.today()
 
     if month and year:
-        # Monthly: days in that specific month
         import calendar
         _, last_day = calendar.monthrange(year, month)
         month_start = date(year, month, 1)
         month_end = date(year, month, last_day)
 
-        # Cap at branch start
         if month_end < branch.start_date:
             return 0
         if month_start < branch.start_date:
             month_start = branch.start_date
         return (month_end - month_start).days + 1
     else:
-        # YTD: from start_date to today
         if today < branch.start_date:
             return 0
         return (today - branch.start_date).days + 1
@@ -166,8 +158,12 @@ def _pnl(db, branch, month=None, year=None):
 
     rent_expense = exp.get("Rent Expense", 0)
 
-    pure_room_sale = gross - rev["fnb_revenue"] - staff_food - guest_food
-    pure_fnb_sale = rev["fnb_revenue"] + staff_food + guest_food
+    # ===== UPDATED FORMULAS =====
+    # Pure Room Sale = room_revenue − plan_sale
+    pure_room_sale = rev["room_revenue"] - plan_sale
+    # Pure F&B Sale = fnb_revenue + plan_sale
+    pure_fnb_sale = rev["fnb_revenue"] + plan_sale
+    # =============================
 
     fixed = nat["Fixed"]
     variable = nat["Variable"]
@@ -180,7 +176,9 @@ def _pnl(db, branch, month=None, year=None):
     room_inventory = branch.rooms * days_op if days_op else 0
 
     occupancy_pct = _safe_div(rev["rooms_occupied"], rev["rooms_available"])
-    arr = _safe_div(rev["room_revenue"], rev["rooms_occupied"])
+    # ===== UPDATED: Avg Room Rent from pure_room_sale =====
+    arr = _safe_div(pure_room_sale, rev["rooms_occupied"])
+    # ======================================================
     fnb_per_room = _safe_div(rev["fnb_revenue"], rev["rooms_occupied"])
     running_cost = float(branch.running_cost_per_room or 0)
     fb_inventory = _safe_div(pure_fnb_sale, pure_room_sale + pure_fnb_sale)
@@ -214,7 +212,6 @@ def _pnl(db, branch, month=None, year=None):
         "branch": branch.name,
         "is_head_office": branch.is_head_office,
 
-        # Revenue
         "room_revenue": rev["room_revenue"],
         "fnb_revenue": rev["fnb_revenue"],
         "other_income": rev["other_income"],
@@ -226,12 +223,10 @@ def _pnl(db, branch, month=None, year=None):
         "pure_room_sale": pure_room_sale,
         "pure_fnb_sale": pure_fnb_sale,
 
-        # Expenses
         "expenses": exp,
         "total_expenses": total_expenses,
         "net_profit": net_profit,
 
-        # Fixed / Variable
         "total_fixed_expenses": fixed,
         "total_variable_expenses": variable,
         "fixed_excluding_rent": fixed_excl_rent,
@@ -240,7 +235,6 @@ def _pnl(db, branch, month=None, year=None):
         "guest_food_costing": guest_food,
         "plan_sale": plan_sale,
 
-        # Metrics
         "days_operational": days_op,
         "rooms_available": branch.rooms,
         "occupancy_pct": occupancy_pct,
@@ -252,7 +246,6 @@ def _pnl(db, branch, month=None, year=None):
         "running_cost_per_room": running_cost,
         "fb_inventory": fb_inventory,
 
-        # Variance / BEP
         "variance_fnb": variance_fnb,
         "variance_room": variance_room,
         "room_nights_shortage": shortage,
@@ -261,7 +254,6 @@ def _pnl(db, branch, month=None, year=None):
         "fnb_contribution": fnb_contribution,
         "fb_revenue_pct": fb_revenue_pct,
 
-        # Expense Ratios
         "fixed_pct": fixed_pct,
         "variable_pct": variable_pct,
         "employee_cost_pct": employee_cost_pct,
@@ -269,7 +261,6 @@ def _pnl(db, branch, month=None, year=None):
         "hotel_opex_pct": hotel_opex_pct,
         "rent_pct": rent_pct,
 
-        # Expense / Revenue Ratios
         "employee_to_revenue": employee_to_revenue,
         "hotel_opex_to_revenue": hotel_opex_to_revenue,
         "rent_to_revenue": rent_to_revenue,
@@ -278,7 +269,6 @@ def _pnl(db, branch, month=None, year=None):
 
 
 def _aggregate_totals(branch_pnls):
-    """Sum all numeric fields across branches."""
     if not branch_pnls:
         return {}
     keys = [
@@ -298,18 +288,23 @@ def _aggregate_totals(branch_pnls):
     for k in keys:
         totals[k] = sum(float(b.get(k, 0) or 0) for b in branch_pnls)
 
-    # Ratios from totals
     totals["occupancy_pct"] = _safe_div(totals["rooms_occupied"], totals["rooms_available"])
-    totals["arr"] = _safe_div(totals["room_revenue"], totals["rooms_occupied"])
+    totals["arr"] = _safe_div(totals["pure_room_sale"], totals["rooms_occupied"])
     totals["fnb_per_room"] = _safe_div(totals["fnb_revenue"], totals["rooms_occupied"])
-    totals["fb_inventory"] = _safe_div(totals["pure_fnb_sale"], totals["pure_room_sale"] + totals["pure_fnb_sale"])
-    totals["target_room_nights_pct"] = _safe_div(totals["target_room_nights"], totals["room_inventory"])
-    totals["fb_revenue_pct"] = _safe_div(totals["guest_food_costing"], totals["pure_fnb_sale"])
+    totals["fb_inventory"] = _safe_div(
+        totals["pure_fnb_sale"],
+        totals["pure_room_sale"] + totals["pure_fnb_sale"],
+    )
+    totals["target_room_nights_pct"] = _safe_div(
+        totals["target_room_nights"], totals["room_inventory"]
+    )
+    totals["fb_revenue_pct"] = _safe_div(
+        totals["guest_food_costing"], totals["pure_fnb_sale"]
+    )
 
     totals["fixed_pct"] = _safe_div(totals["total_fixed_expenses"], totals["total_expenses"])
     totals["variable_pct"] = _safe_div(totals["total_variable_expenses"], totals["total_expenses"])
 
-    # Aggregate expenses by head
     heads = {}
     for b in branch_pnls:
         for h, v in (b.get("expenses") or {}).items():
