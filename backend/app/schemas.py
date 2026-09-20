@@ -1,5 +1,7 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
+from datetime import date
+
 
 class BranchIn(BaseModel):
     name: str
@@ -10,26 +12,37 @@ class BranchIn(BaseModel):
     housekeeping: float = 0
     home_amenities: float = 0
     is_head_office: int = 0
+    start_date: Optional[date] = None
+    running_cost_per_room: float = 0
+
 
 class BranchOut(BranchIn):
     id: int
-    class Config: from_attributes = True
+    class Config:
+        from_attributes = True
+
 
 class ExpenseHeadIn(BaseModel):
     name: str
 
+
 class ExpenseHeadOut(ExpenseHeadIn):
     id: int
-    class Config: from_attributes = True
+    class Config:
+        from_attributes = True
+
 
 class ExpenseLedgerIn(BaseModel):
     name: str
     expense_head_id: int
     nature: str = "Variable"
 
+
 class ExpenseLedgerOut(ExpenseLedgerIn):
     id: int
-    class Config: from_attributes = True
+    class Config:
+        from_attributes = True
+
 
 class ExpenseEntryIn(BaseModel):
     branch_id: int
@@ -37,6 +50,7 @@ class ExpenseEntryIn(BaseModel):
     month: int
     year: int
     amount: float
+
 
 class RevenueEntryIn(BaseModel):
     branch_id: int
@@ -51,18 +65,49 @@ class RevenueEntryIn(BaseModel):
     rooms_occupied: int = 0
     pax_fnb: int = 0
 
+
+class FoodCostIn(BaseModel):
+    branch_id: int
+    month: int
+    year: int
+    staff_cost: float = 0
+    guest_cost: float = 0
+
+
+class FoodCostOut(FoodCostIn):
+    id: int
+    class Config:
+        from_attributes = True
+
+
+class PlanSaleIn(BaseModel):
+    branch_id: int
+    month: int
+    year: int
+    amount: float = 0
+
+
+class PlanSaleOut(PlanSaleIn):
+    id: int
+    class Config:
+        from_attributes = True
+
+
 class UserOut(BaseModel):
     id: int
     email: EmailStr
     name: str
     role: str
     branch_id: Optional[int]
-    class Config: from_attributes = True
+    class Config:
+        from_attributes = True
+
 
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserOut
+
 
 class LoginIn(BaseModel):
     email: EmailStr
