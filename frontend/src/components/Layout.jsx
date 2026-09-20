@@ -8,6 +8,8 @@ const links = [
   { to: '/app/monthly', label: 'Monthly Report' },
   { to: '/app/comparison', label: 'Comparison' },
   { to: '/app/ytd', label: 'YTD Summary' },
+  { to: '/app/ledgers', label: 'Ledgers' },
+  { to: '/app/branches', label: 'Branches' },
 ]
 
 export default function Layout() {
@@ -25,7 +27,9 @@ export default function Layout() {
     <>
       <div className="px-4 py-5 border-b border-slate-800">
         <h1 className="text-xl font-bold text-white">El Hotel MIS</h1>
-        <p className="text-xs text-slate-400 mt-1">Multi-Branch Hospitality</p>
+        <p className="text-xs text-slate-400 mt-1">
+          Multi-Branch Hospitality
+        </p>
       </div>
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         {links.map((l) => (
@@ -48,7 +52,9 @@ export default function Layout() {
       </nav>
       <div className="p-3 border-t border-slate-800">
         <div className="text-xs text-slate-400 mb-2 px-2">
-          <div className="font-medium text-slate-200">{user.name || 'User'}</div>
+          <div className="font-medium text-slate-200">
+            {user.name || 'User'}
+          </div>
           <div>{user.role || 'viewer'}</div>
         </div>
         <button
@@ -83,7 +89,6 @@ export default function Layout() {
 
       {/* Main area */}
       <div className="flex-1 flex flex-col">
-        {/* Mobile top bar */}
         <header className="md:hidden bg-slate-900 text-white px-4 py-3 flex items-center justify-between">
           <button
             onClick={() => setSidebarOpen(true)}
