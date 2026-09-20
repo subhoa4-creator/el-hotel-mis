@@ -8,7 +8,8 @@ from .auth import hash_pw, verify_pw, create_token
 from .routers import (
     branches, expense_heads, expense_ledgers,
     expense_entries, revenue_entries, reports, seed,
-    food_cost, plan_sale, room_history
+    food_cost, plan_sale, room_history,
+    export_excel, export_pdf
 )
 from .schemas import LoginIn, Token
 
@@ -90,6 +91,8 @@ app.include_router(seed.router)
 app.include_router(food_cost.router)
 app.include_router(plan_sale.router)
 app.include_router(room_history.router)
+app.include_router(export_excel.router)
+app.include_router(export_pdf.router)
 
 
 @app.get("/")
