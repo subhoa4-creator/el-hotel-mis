@@ -7,7 +7,8 @@ from . import models
 from .auth import hash_pw, verify_pw, create_token
 from .routers import (
     branches, expense_heads, expense_ledgers,
-    expense_entries, revenue_entries, reports, seed
+    expense_entries, revenue_entries, reports, seed,
+    food_cost, plan_sale
 )
 from .schemas import LoginIn, Token
 
@@ -49,13 +50,10 @@ def startup():
                 db.add(models.Branch(name=name, rooms=rooms, rent=rent))
             db.commit()
 
-        # Backfill start_date for branches without it (existing branches)
+        # Backfill start_date for branches without it
         for b in db.query(models.Branch).all():
-            if b.start_date is None:
-                if b.is_head_office:
-                    b.start_date = None
-                else:
-                    b.start_date = date(2026, 4, 1)
+            if b.start_date is None and not b.is_head_office:
+                b.start_date = date(2026, 4, 1)
         db.commit()
 
         # Seed expense heads
@@ -89,6 +87,8 @@ app.include_router(expense_entries.router)
 app.include_router(revenue_entries.router)
 app.include_router(reports.router)
 app.include_router(seed.router)
+app.include_router(food_cost.router)
+app.include_router(plan_sale.router)
 
 
 @app.get("/")
