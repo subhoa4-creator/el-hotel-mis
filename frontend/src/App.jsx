@@ -7,6 +7,7 @@ import RevenueEntry from './pages/RevenueEntry'
 import MonthlyReport from './pages/MonthlyReport'
 import Comparison from './pages/Comparison'
 import YTDSummary from './pages/YTDSummary'
+import AllFY from './pages/AllFY'
 import Ledgers from './pages/Ledgers'
 import Branches from './pages/Branches'
 import FoodCost from './pages/FoodCost'
@@ -26,13 +27,14 @@ export default function App() {
         <Route index element={<Dashboard />} />
         <Route path="expenses" element={<ExpenseEntry />} />
         <Route path="revenue" element={<RevenueEntry />} />
+        <Route path="food-cost" element={<FoodCost />} />
+        <Route path="plan-sale" element={<PlanSale />} />
         <Route path="monthly" element={<MonthlyReport />} />
         <Route path="comparison" element={<Comparison />} />
         <Route path="ytd" element={<YTDSummary />} />
+        <Route path="all-fy" element={<AllFY />} />
         <Route path="ledgers" element={<Ledgers />} />
         <Route path="branches" element={<Branches />} />
-        <Route path="food-cost" element={<FoodCost />} />
-        <Route path="plan-sale" element={<PlanSale />} />
         <Route path="cost-per-room" element={<CostPerRoom />} />
       </Route>
     </Routes>
