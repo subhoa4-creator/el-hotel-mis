@@ -1,9 +1,20 @@
 import { useEffect, useState } from 'react'
 import api from '../api'
 
-const MONTHS = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December'
+// FY month order: Apr → Mar
+const FY_MONTHS = [
+  { num: 4, label: 'April' },
+  { num: 5, label: 'May' },
+  { num: 6, label: 'June' },
+  { num: 7, label: 'July' },
+  { num: 8, label: 'August' },
+  { num: 9, label: 'September' },
+  { num: 10, label: 'October' },
+  { num: 11, label: 'November' },
+  { num: 12, label: 'December' },
+  { num: 1, label: 'January' },
+  { num: 2, label: 'February' },
+  { num: 3, label: 'March' },
 ]
 
 const money = (v) => {
@@ -38,13 +49,24 @@ const EXPENSE_HEADS = [
 ]
 
 export default function Comparison() {
-  const [monthA, setMonthA] = useState(new Date().getMonth())
-  const [yearA, setYearA] = useState(new Date().getFullYear())
-  const [monthB, setMonthB] = useState(new Date().getMonth() + 1)
-  const [yearB, setYearB] = useState(new Date().getFullYear())
+  const now = new Date()
+  const defaultFy =
+    now.getMonth() + 1 >= 4 ? now.getFullYear() : now.getFullYear() - 1
+
+  // Period A (default: last month)
+  const [fyA, setFyA] = useState(defaultFy)
+  const [monthA, setMonthA] = useState(now.getMonth() === 0 ? 12 : now.getMonth())
+
+  // Period B (default: current month)
+  const [fyB, setFyB] = useState(defaultFy)
+  const [monthB, setMonthB] = useState(now.getMonth() + 1)
+
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const yearA = monthA >= 4 ? fyA : fyA + 1
+  const yearB = monthB >= 4 ? fyB : fyB + 1
 
   useEffect(() => {
     setLoading(true)
@@ -84,19 +106,19 @@ export default function Comparison() {
       <td>{label}</td>
       {branches.map((b) => (
         <td key={'a-' + b.branch_id} className="text-right whitespace-nowrap">
-          {fmt(getter(b, A.totals))}
+          {fmt(getter(b))}
         </td>
       ))}
       <td className="text-right whitespace-nowrap bg-slate-50 font-medium">
-        {fmt(getter({ ...A.totals, branch_id: 'a-total' }, A.totals))}
+        {fmt(getter({ ...A.totals }))}
       </td>
       {branches.map((b) => (
         <td key={'b-' + b.branch_id} className="text-right whitespace-nowrap">
-          {fmt(getter(b, B.totals))}
+          {fmt(getter(b))}
         </td>
       ))}
       <td className="text-right whitespace-nowrap bg-slate-50 font-medium">
-        {fmt(getter({ ...B.totals, branch_id: 'b-total' }, B.totals))}
+        {fmt(getter({ ...B.totals }))}
       </td>
     </tr>
   )
@@ -108,6 +130,9 @@ export default function Comparison() {
       </td>
     </tr>
   )
+
+  const monthLabelA = FY_MONTHS.find((m) => m.num === monthA)?.label || ''
+  const monthLabelB = FY_MONTHS.find((m) => m.num === monthB)?.label || ''
 
   return (
     <div className="space-y-6">
@@ -123,25 +148,35 @@ export default function Comparison() {
           <h3 className="font-semibold mb-3">Period A</h3>
           <div className="grid grid-cols-2 gap-3">
             <div>
+              <label className="label">Financial Year</label>
+              <select
+                className="input"
+                value={fyA}
+                onChange={(e) => setFyA(Number(e.target.value))}
+              >
+                {[fyA - 1, fyA, fyA + 1].map((y) => (
+                  <option key={y} value={y}>
+                    {y}-{(y + 1) % 100}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label className="label">Month</label>
               <select
                 className="input"
                 value={monthA}
                 onChange={(e) => setMonthA(Number(e.target.value))}
               >
-                {MONTHS.map((m, i) => (
-                  <option key={i} value={i + 1}>{m}</option>
+                {FY_MONTHS.map((m) => (
+                  <option key={m.num} value={m.num}>
+                    {m.label}
+                  </option>
                 ))}
               </select>
             </div>
-            <div>
-              <label className="label">Year</label>
-              <input
-                type="number"
-                className="input"
-                value={yearA}
-                onChange={(e) => setYearA(Number(e.target.value))}
-              />
+            <div className="col-span-2 text-xs text-slate-500">
+              Showing: {monthLabelA} {yearA}
             </div>
           </div>
         </div>
@@ -150,25 +185,35 @@ export default function Comparison() {
           <h3 className="font-semibold mb-3">Period B</h3>
           <div className="grid grid-cols-2 gap-3">
             <div>
+              <label className="label">Financial Year</label>
+              <select
+                className="input"
+                value={fyB}
+                onChange={(e) => setFyB(Number(e.target.value))}
+              >
+                {[fyB - 1, fyB, fyB + 1].map((y) => (
+                  <option key={y} value={y}>
+                    {y}-{(y + 1) % 100}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label className="label">Month</label>
               <select
                 className="input"
                 value={monthB}
                 onChange={(e) => setMonthB(Number(e.target.value))}
               >
-                {MONTHS.map((m, i) => (
-                  <option key={i} value={i + 1}>{m}</option>
+                {FY_MONTHS.map((m) => (
+                  <option key={m.num} value={m.num}>
+                    {m.label}
+                  </option>
                 ))}
               </select>
             </div>
-            <div>
-              <label className="label">Year</label>
-              <input
-                type="number"
-                className="input"
-                value={yearB}
-                onChange={(e) => setYearB(Number(e.target.value))}
-              />
+            <div className="col-span-2 text-xs text-slate-500">
+              Showing: {monthLabelB} {yearB}
             </div>
           </div>
         </div>
@@ -179,17 +224,11 @@ export default function Comparison() {
           <thead>
             <tr>
               <th rowSpan={2} className="align-bottom">Particulars</th>
-              <th
-                colSpan={branches.length + 1}
-                className="text-center bg-blue-50"
-              >
-                Period A — {MONTHS[monthA - 1]} {yearA}
+              <th colSpan={branches.length + 1} className="text-center bg-blue-50">
+                Period A — {monthLabelA} {yearA}
               </th>
-              <th
-                colSpan={branches.length + 1}
-                className="text-center bg-emerald-50"
-              >
-                Period B — {MONTHS[monthB - 1]} {yearB}
+              <th colSpan={branches.length + 1} className="text-center bg-emerald-50">
+                Period B — {monthLabelB} {yearB}
               </th>
             </tr>
             <tr>
