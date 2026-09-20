@@ -1,9 +1,20 @@
 import { useEffect, useState } from 'react'
 import api from '../api'
 
-const MONTHS = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December'
+// Financial year month order: Apr → Mar
+const FY_MONTHS = [
+  { num: 4, label: 'April' },
+  { num: 5, label: 'May' },
+  { num: 6, label: 'June' },
+  { num: 7, label: 'July' },
+  { num: 8, label: 'August' },
+  { num: 9, label: 'September' },
+  { num: 10, label: 'October' },
+  { num: 11, label: 'November' },
+  { num: 12, label: 'December' },
+  { num: 1, label: 'January' },
+  { num: 2, label: 'February' },
+  { num: 3, label: 'March' },
 ]
 
 const money = (v) => {
@@ -38,23 +49,32 @@ const EXPENSE_HEADS = [
 ]
 
 export default function MonthlyReport() {
-  const [month, setMonth] = useState(new Date().getMonth() + 1)
-  const [year, setYear] = useState(new Date().getFullYear())
+  const now = new Date()
+  const defaultFyStart =
+    now.getMonth() + 1 >= 4 ? now.getFullYear() : now.getFullYear() - 1
+  const [fyStart, setFyStart] = useState(defaultFyStart)
+  const [month, setMonth] = useState(now.getMonth() + 1)
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Derive calendar year for the selected month
+  // Months 4-12 → fyStart, Months 1-3 → fyStart + 1
+  const calendarYear = month >= 4 ? fyStart : fyStart + 1
 
   useEffect(() => {
     setLoading(true)
     setError('')
     api
-      .get('/api/reports/monthly', { params: { month, year } })
+      .get('/api/reports/monthly', {
+        params: { month, year: calendarYear },
+      })
       .then((res) => setData(res.data))
       .catch((err) =>
         setError(err.response?.data?.detail || 'Failed to load report')
       )
       .finally(() => setLoading(false))
-  }, [month, year])
+  }, [month, calendarYear])
 
   if (loading) {
     return <div className="text-center py-10 text-slate-500">Loading…</div>
@@ -90,18 +110,32 @@ export default function MonthlyReport() {
     </tr>
   )
 
+  const monthLabel = FY_MONTHS.find((m) => m.num === month)?.label || ''
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Monthly Report</h1>
-          <p className="text-slate-500 text-sm">
-            Profit &amp; Loss for the selected month
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold">Monthly Report</h1>
+        <p className="text-slate-500 text-sm">
+          {monthLabel} {calendarYear} · Profit &amp; Loss for the month
+        </p>
       </div>
 
-      <div className="card grid grid-cols-2 gap-4 max-w-md">
+      <div className="card grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl">
+        <div>
+          <label className="label">Financial Year</label>
+          <select
+            className="input"
+            value={fyStart}
+            onChange={(e) => setFyStart(Number(e.target.value))}
+          >
+            {[fyStart - 2, fyStart - 1, fyStart, fyStart + 1].map((y) => (
+              <option key={y} value={y}>
+                {y}-{(y + 1) % 100}
+              </option>
+            ))}
+          </select>
+        </div>
         <div>
           <label className="label">Month</label>
           <select
@@ -109,26 +143,23 @@ export default function MonthlyReport() {
             value={month}
             onChange={(e) => setMonth(Number(e.target.value))}
           >
-            {MONTHS.map((m, i) => (
-              <option key={i} value={i + 1}>
-                {m}
+            {FY_MONTHS.map((m) => (
+              <option key={m.num} value={m.num}>
+                {m.label}
               </option>
             ))}
           </select>
         </div>
         <div>
-          <label className="label">Year</label>
-          <input
-            type="number"
-            className="input"
-            value={year}
-            onChange={(e) => setYear(Number(e.target.value))}
-          />
+          <label className="label">Period</label>
+          <div className="input bg-slate-100 text-slate-700">
+            {monthLabel} {calendarYear}
+          </div>
         </div>
       </div>
 
       <div className="card overflow-x-auto">
-        <table className="table-clean min-w-[800px]">
+        <table className="table-clean min-w-[900px]">
           <thead>
             <tr>
               <th>Particulars</th>
