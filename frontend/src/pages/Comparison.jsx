@@ -61,9 +61,36 @@ export default function Comparison() {
 
   const rows = data
     ? [
-        { label: 'Gross Revenue',    a: data.period_a.gross_revenue,  b: data.period_b.gross_revenue,  v: data.variance.gross_revenue },
-        { label: 'Total Expenses',   a: data.period_a.total_expenses, b: data.period_b.total_expenses, v: data.variance.total_expenses },
-        { label: 'Net Profit',       a: data.period_a.net_profit,     b: data.period_b.net_profit,     v: data.variance.net_profit },
+        {
+          label: 'Gross Revenue',
+          a: data.period_a.gross_revenue,
+          b: data.period_b.gross_revenue,
+          v: data.variance.gross_revenue,
+        },
+        {
+          label: 'Total Fixed Expenses',
+          a: data.period_a.total_fixed_expenses,
+          b: data.period_b.total_fixed_expenses,
+          v: null,
+        },
+        {
+          label: 'Total Variable Expenses',
+          a: data.period_a.total_variable_expenses,
+          b: data.period_b.total_variable_expenses,
+          v: null,
+        },
+        {
+          label: 'Total Expenses',
+          a: data.period_a.total_expenses,
+          b: data.period_b.total_expenses,
+          v: data.variance.total_expenses,
+        },
+        {
+          label: 'Net Profit',
+          a: data.period_a.net_profit,
+          b: data.period_b.net_profit,
+          v: data.variance.net_profit,
+        },
       ]
     : []
 
@@ -178,8 +205,14 @@ export default function Comparison() {
                   <td className="font-medium">{r.label}</td>
                   <td className="text-right">{money(r.a)}</td>
                   <td className="text-right">{money(r.b)}</td>
-                  <td className={`text-right font-medium ${pctColor(r.v)}`}>
-                    {pct(r.v)}
+                  <td
+                    className={`text-right font-medium ${
+                      r.v === null
+                        ? 'text-slate-400'
+                        : pctColor(r.v)
+                    }`}
+                  >
+                    {r.v === null ? '—' : pct(r.v)}
                   </td>
                 </tr>
               ))}
@@ -188,14 +221,18 @@ export default function Comparison() {
 
           <div className="mt-6 grid grid-cols-2 gap-4">
             <div>
-              <div className="text-xs text-slate-500">Occupancy (A → B)</div>
+              <div className="text-xs text-slate-500">
+                Occupancy (A → B)
+              </div>
               <div className="text-sm">
                 {(data.period_a.occupancy_pct || 0).toFixed(1)}% →{' '}
                 {(data.period_b.occupancy_pct || 0).toFixed(1)}%
               </div>
             </div>
             <div>
-              <div className="text-xs text-slate-500">Avg Room Rent (A → B)</div>
+              <div className="text-xs text-slate-500">
+                Avg Room Rent (A → B)
+              </div>
               <div className="text-sm">
                 ₹{(data.period_a.arr || 0).toFixed(0)} → ₹
                 {(data.period_b.arr || 0).toFixed(0)}
