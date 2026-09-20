@@ -1,14 +1,47 @@
+import calendar
 from datetime import date
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_, and_
 from ..database import get_db
 from .. import models
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
 
-def _expense_by_head(db, branch_id, month=None, year=None):
+# ============================================================
+# FY helpers (Apr → Mar)
+# ============================================================
+
+def fy_label(year: int) -> str:
+    return f"{year}-{(year + 1) % 100:02d}"
+
+
+def fy_end_date(year: int) -> date:
+    return date(year + 1, 3, 31)
+
+
+def days_in_month(year: int, month: int) -> int:
+    return calendar.monthrange(year, month)[1]
+
+
+def _fy_filter(query, model):
+    """Filter model rows to a FY (caller passes fy_year via closure)."""
+    return query
+
+
+def _fy_conditions(model, fy_year):
+    """Return SQLAlchemy OR condition for FY Apr(fy_year) → Mar(fy_year+1)."""
+    cond1 = and_(model.year == fy_year, model.month >= 4)
+    cond2 = and_(model.year == fy_year + 1, model.month <= 3)
+    return or_(cond1, cond2)
+
+
+# ============================================================
+# Data helpers
+# ============================================================
+
+def _expense_by_head(db, branch_id, month=None, year=None, fy_year=None):
     q = (
         db.query(
             models.ExpenseHead.name,
@@ -24,15 +57,18 @@ def _expense_by_head(db, branch_id, month=None, year=None):
         )
         .filter(models.ExpenseEntry.branch_id == branch_id)
     )
-    if month:
-        q = q.filter(models.ExpenseEntry.month == month)
-    if year:
-        q = q.filter(models.ExpenseEntry.year == year)
+    if month and year:
+        q = q.filter(
+            models.ExpenseEntry.month == month,
+            models.ExpenseEntry.year == year,
+        )
+    elif fy_year is not None:
+        q = q.filter(_fy_conditions(models.ExpenseEntry, fy_year))
     q = q.group_by(models.ExpenseHead.name)
     return {name: float(total) for name, total in q.all()}
 
 
-def _expense_by_nature(db, branch_id, month=None, year=None):
+def _expense_by_nature(db, branch_id, month=None, year=None, fy_year=None):
     q = (
         db.query(
             models.ExpenseLedger.nature,
@@ -44,10 +80,13 @@ def _expense_by_nature(db, branch_id, month=None, year=None):
         )
         .filter(models.ExpenseEntry.branch_id == branch_id)
     )
-    if month:
-        q = q.filter(models.ExpenseEntry.month == month)
-    if year:
-        q = q.filter(models.ExpenseEntry.year == year)
+    if month and year:
+        q = q.filter(
+            models.ExpenseEntry.month == month,
+            models.ExpenseEntry.year == year,
+        )
+    elif fy_year is not None:
+        q = q.filter(_fy_conditions(models.ExpenseEntry, fy_year))
     q = q.group_by(models.ExpenseLedger.nature)
     out = {"Fixed": 0.0, "Variable": 0.0}
     for nature, total in q.all():
@@ -56,21 +95,23 @@ def _expense_by_nature(db, branch_id, month=None, year=None):
     return out
 
 
-def _revenue(db, branch_id, month=None, year=None):
+def _revenue(db, branch_id, month=None, year=None, fy_year=None):
     q = db.query(
         func.coalesce(func.sum(models.RevenueEntry.room_revenue), 0),
         func.coalesce(func.sum(models.RevenueEntry.fnb_revenue), 0),
         func.coalesce(func.sum(models.RevenueEntry.other_income), 0),
         func.coalesce(func.sum(models.RevenueEntry.discount), 0),
         func.coalesce(func.sum(models.RevenueEntry.gst), 0),
-        func.coalesce(func.sum(models.RevenueEntry.rooms_available), 0),
         func.coalesce(func.sum(models.RevenueEntry.rooms_occupied), 0),
         func.coalesce(func.sum(models.RevenueEntry.pax_fnb), 0),
     ).filter(models.RevenueEntry.branch_id == branch_id)
-    if month:
-        q = q.filter(models.RevenueEntry.month == month)
-    if year:
-        q = q.filter(models.RevenueEntry.year == year)
+    if month and year:
+        q = q.filter(
+            models.RevenueEntry.month == month,
+            models.RevenueEntry.year == year,
+        )
+    elif fy_year is not None:
+        q = q.filter(_fy_conditions(models.RevenueEntry, fy_year))
     r = q.first()
     return {
         "room_revenue": float(r[0]),
@@ -78,37 +119,46 @@ def _revenue(db, branch_id, month=None, year=None):
         "other_income": float(r[2]),
         "discount": float(r[3]),
         "gst": float(r[4]),
-        "rooms_available": int(r[5]),
-        "rooms_occupied": int(r[6]),
-        "pax_fnb": int(r[7]),
+        "rooms_occupied": int(r[5]),
+        "pax_fnb": int(r[6]),
     }
 
 
-def _food_cost(db, branch_id, month=None, year=None):
+def _food_cost(db, branch_id, month=None, year=None, fy_year=None):
     q = db.query(
         func.coalesce(func.sum(models.FoodCost.staff_cost), 0),
         func.coalesce(func.sum(models.FoodCost.guest_cost), 0),
     ).filter(models.FoodCost.branch_id == branch_id)
-    if month:
-        q = q.filter(models.FoodCost.month == month)
-    if year:
-        q = q.filter(models.FoodCost.year == year)
+    if month and year:
+        q = q.filter(
+            models.FoodCost.month == month,
+            models.FoodCost.year == year,
+        )
+    elif fy_year is not None:
+        q = q.filter(_fy_conditions(models.FoodCost, fy_year))
     r = q.first()
     return {"staff": float(r[0]), "guest": float(r[1])}
 
 
-def _plan_sale(db, branch_id, month=None, year=None):
+def _plan_sale(db, branch_id, month=None, year=None, fy_year=None):
     q = db.query(
         func.coalesce(func.sum(models.PlanSale.amount), 0)
     ).filter(models.PlanSale.branch_id == branch_id)
-    if month:
-        q = q.filter(models.PlanSale.month == month)
-    if year:
-        q = q.filter(models.PlanSale.year == year)
+    if month and year:
+        q = q.filter(
+            models.PlanSale.month == month,
+            models.PlanSale.year == year,
+        )
+    elif fy_year is not None:
+        q = q.filter(_fy_conditions(models.PlanSale, fy_year))
     return float(q.first()[0])
 
 
-def _days_operational(branch, month=None, year=None):
+# ============================================================
+# Days Operational
+# ============================================================
+
+def _days_operational(branch, month=None, year=None, fy_year=None):
     if branch.is_head_office:
         return 0
     if not branch.start_date:
@@ -117,53 +167,58 @@ def _days_operational(branch, month=None, year=None):
     today = date.today()
 
     if month and year:
-        import calendar
-        _, last_day = calendar.monthrange(year, month)
-        month_start = date(year, month, 1)
-        month_end = date(year, month, last_day)
+        last_day = days_in_month(year, month)
+        m_start = date(year, month, 1)
+        m_end = date(year, month, last_day)
+        if m_end < branch.start_date:
+            return 0
+        if m_start < branch.start_date:
+            m_start = branch.start_date
+        return (m_end - m_start).days + 1
 
-        if month_end < branch.start_date:
+    if fy_year is not None:
+        fy_end = fy_end_date(fy_year)
+        cap = min(today, fy_end)
+        if cap < branch.start_date:
             return 0
-        if month_start < branch.start_date:
-            month_start = branch.start_date
-        return (month_end - month_start).days + 1
-    else:
-        if today < branch.start_date:
-            return 0
-        return (today - branch.start_date).days + 1
+        return (cap - branch.start_date).days + 1
+
+    if today < branch.start_date:
+        return 0
+    return (today - branch.start_date).days + 1
 
 
 def _safe_div(a, b):
     return (a / b) if b else 0
 
 
-def _pnl(db, branch, month=None, year=None):
+# ============================================================
+# Main P&L
+# ============================================================
+
+def _pnl(db, branch, month=None, year=None, fy_year=None):
     branch_id = branch.id
 
-    rev = _revenue(db, branch_id, month, year)
+    rev = _revenue(db, branch_id, month, year, fy_year)
     gross = rev["room_revenue"] + rev["fnb_revenue"] + rev["other_income"]
     discount = rev["discount"]
     net_revenue = gross - discount
     gst = rev["gst"]
     total_billing = net_revenue + gst
 
-    exp = _expense_by_head(db, branch_id, month, year)
-    nat = _expense_by_nature(db, branch_id, month, year)
+    exp = _expense_by_head(db, branch_id, month, year, fy_year)
+    nat = _expense_by_nature(db, branch_id, month, year, fy_year)
     total_expenses = sum(exp.values())
 
-    food = _food_cost(db, branch_id, month, year)
+    food = _food_cost(db, branch_id, month, year, fy_year)
     staff_food = food["staff"]
     guest_food = food["guest"]
-    plan_sale = _plan_sale(db, branch_id, month, year)
+    plan_sale = _plan_sale(db, branch_id, month, year, fy_year)
 
     rent_expense = exp.get("Rent Expense", 0)
 
-    # ===== UPDATED FORMULAS =====
-    # Pure Room Sale = room_revenue − plan_sale
     pure_room_sale = rev["room_revenue"] - plan_sale
-    # Pure F&B Sale = fnb_revenue + plan_sale
     pure_fnb_sale = rev["fnb_revenue"] + plan_sale
-    # =============================
 
     fixed = nat["Fixed"]
     variable = nat["Variable"]
@@ -172,13 +227,13 @@ def _pnl(db, branch, month=None, year=None):
     net_profit = net_revenue - total_expenses
     loss_excl_rent = net_profit + rent_expense
 
-    days_op = _days_operational(branch, month, year)
-    room_inventory = branch.rooms * days_op if days_op else 0
+    days_op = _days_operational(branch, month, year, fy_year)
 
-    occupancy_pct = _safe_div(rev["rooms_occupied"], rev["rooms_available"])
-    # ===== UPDATED: Avg Room Rent from pure_room_sale =====
+    rooms_available = branch.rooms * days_op if days_op else 0
+    room_inventory = rooms_available
+
+    occupancy_pct = _safe_div(rev["rooms_occupied"], rooms_available)
     arr = _safe_div(pure_room_sale, rev["rooms_occupied"])
-    # ======================================================
     fnb_per_room = _safe_div(rev["fnb_revenue"], rev["rooms_occupied"])
     running_cost = float(branch.running_cost_per_room or 0)
     fb_inventory = _safe_div(pure_fnb_sale, pure_room_sale + pure_fnb_sale)
@@ -236,7 +291,7 @@ def _pnl(db, branch, month=None, year=None):
         "plan_sale": plan_sale,
 
         "days_operational": days_op,
-        "rooms_available": branch.rooms,
+        "rooms_available": rooms_available,
         "occupancy_pct": occupancy_pct,
         "arr": arr,
         "room_inventory": room_inventory,
@@ -327,9 +382,12 @@ def _aggregate_totals(branch_pnls):
     totals["fnb_cost_to_fnb_revenue"] = _safe_div(fnb_cost, totals["fnb_revenue"])
 
     totals["running_cost_per_room"] = 0
-
     return totals
 
+
+# ============================================================
+# Endpoints
+# ============================================================
 
 @router.get("/monthly")
 def monthly(
@@ -338,17 +396,63 @@ def monthly(
     db: Session = Depends(get_db),
 ):
     branches = db.query(models.Branch).order_by(models.Branch.id).all()
-    out = [_pnl(db, b, month, year) for b in branches]
-    totals = _aggregate_totals(out)
-    return {"branches": out, "totals": totals}
+    out = [_pnl(db, b, month=month, year=year) for b in branches]
+    return {"branches": out, "totals": _aggregate_totals(out)}
 
 
 @router.get("/ytd")
 def ytd(year: int = Query(...), db: Session = Depends(get_db)):
+    """Input year = FY start year. year=2026 means Apr 2026 → today."""
     branches = db.query(models.Branch).order_by(models.Branch.id).all()
-    out = [_pnl(db, b, None, year) for b in branches]
-    totals = _aggregate_totals(out)
-    return {"branches": out, "totals": totals}
+    out = [_pnl(db, b, fy_year=year) for b in branches]
+    return {
+        "fy_year": year,
+        "fy_label": fy_label(year),
+        "branches": out,
+        "totals": _aggregate_totals(out),
+    }
+
+
+@router.get("/all-fy")
+def all_fy(
+    start_year: int = Query(None),
+    db: Session = Depends(get_db),
+):
+    today = date.today()
+    current_fy = today.year if today.month >= 4 else today.year - 1
+
+    min_exp = db.query(func.min(models.ExpenseEntry.year)).scalar()
+    min_rev = db.query(func.min(models.RevenueEntry.year)).scalar()
+    candidates = [y for y in [min_exp, min_rev] if y]
+    if candidates:
+        for y in list(candidates):
+            first_row = (
+                db.query(models.ExpenseEntry.month)
+                .filter(models.ExpenseEntry.year == y)
+                .order_by(models.ExpenseEntry.month)
+                .first()
+            )
+            if first_row and first_row[0] <= 3:
+                candidates.append(y - 1)
+        min_year = min(candidates)
+    else:
+        min_year = current_fy
+
+    if start_year is not None:
+        min_year = start_year
+
+    branches = db.query(models.Branch).order_by(models.Branch.id).all()
+    fy_results = []
+    for fy in range(min_year, current_fy + 1):
+        branch_pnls = [_pnl(db, b, fy_year=fy) for b in branches]
+        fy_results.append({
+            "fy_year": fy,
+            "fy_label": fy_label(fy),
+            "is_current": fy == current_fy,
+            "branches": branch_pnls,
+            "totals": _aggregate_totals(branch_pnls),
+        })
+    return {"fy_list": fy_results}
 
 
 @router.get("/comparison")
@@ -360,11 +464,9 @@ def comparison(
     db: Session = Depends(get_db),
 ):
     branches = db.query(models.Branch).order_by(models.Branch.id).all()
-    a_list = [_pnl(db, b, month_a, year_a) for b in branches]
-    b_list = [_pnl(db, b, month_b, year_b) for b in branches]
-    a_totals = _aggregate_totals(a_list)
-    b_totals = _aggregate_totals(b_list)
+    a_list = [_pnl(db, b, month=month_a, year=year_a) for b in branches]
+    b_list = [_pnl(db, b, month=month_b, year=year_b) for b in branches]
     return {
-        "period_a": {"branches": a_list, "totals": a_totals},
-        "period_b": {"branches": b_list, "totals": b_totals},
-    }
+        "period_a": {"branches": a_list, "totals": _aggregate_totals(a_list)},
+        "period_b": {"branches": b_list, "totals": _aggregate_totals(b_list)},
+        }
