@@ -22,6 +22,16 @@ class Branch(Base):
     running_cost_per_room = Column(Numeric(14, 2), default=0)
 
 
+class BranchRoomHistory(Base):
+    __tablename__ = "branch_room_history"
+    id = Column(Integer, primary_key=True)
+    branch_id = Column(Integer, ForeignKey("branches.id", ondelete="CASCADE"), nullable=False)
+    from_date = Column(Date, nullable=False)
+    rooms = Column(Integer, nullable=False)
+    notes = Column(String(200))
+    created_at = Column(DateTime, server_default=func.now())
+
+
 class ExpenseHead(Base):
     __tablename__ = "expense_heads"
     id = Column(Integer, primary_key=True)
