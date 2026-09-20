@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import api from '../api'
+import ExportButtons from '../components/ExportButtons'
 
 const money = (v) => {
   if (v === null || v === undefined) return '—'
@@ -64,11 +65,21 @@ export default function AllFY() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">All Financial Years</h1>
-        <p className="text-slate-500 text-sm">
-          Complete history across every FY since start
-        </p>
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">All Financial Years</h1>
+          <p className="text-slate-500 text-sm">
+            Complete history across every FY since start
+          </p>
+        </div>
+        <ExportButtons
+          endpoints={{
+            excel: '/api/export/excel/all-fy',
+            pdf: '/api/export/pdf/all-fy',
+          }}
+          params={{}}
+          filename="ElHotelMIS_AllFY"
+        />
       </div>
 
       {/* Tabs */}
@@ -346,4 +357,4 @@ function GrandTotalTable({ data }) {
       </table>
     </div>
   )
-          }
+}
