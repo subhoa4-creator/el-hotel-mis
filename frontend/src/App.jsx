@@ -7,6 +7,8 @@ import RevenueEntry from './pages/RevenueEntry'
 import MonthlyReport from './pages/MonthlyReport'
 import Comparison from './pages/Comparison'
 import YTDSummary from './pages/YTDSummary'
+import Ledgers from './pages/Ledgers'
+import Branches from './pages/Branches'
 
 function Protected({ children }) {
   const token = localStorage.getItem('token')
@@ -24,6 +26,8 @@ export default function App() {
         <Route path="monthly" element={<MonthlyReport />} />
         <Route path="comparison" element={<Comparison />} />
         <Route path="ytd" element={<YTDSummary />} />
+        <Route path="ledgers" element={<Ledgers />} />
+        <Route path="branches" element={<Branches />} />
       </Route>
     </Routes>
   )
