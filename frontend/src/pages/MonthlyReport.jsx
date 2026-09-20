@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import api from '../api'
+import ExportButtons from '../components/ExportButtons'
 
 // Financial year month order: Apr → Mar
 const FY_MONTHS = [
@@ -58,8 +59,6 @@ export default function MonthlyReport() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // Derive calendar year for the selected month
-  // Months 4-12 → fyStart, Months 1-3 → fyStart + 1
   const calendarYear = month >= 4 ? fyStart : fyStart + 1
 
   useEffect(() => {
@@ -114,11 +113,21 @@ export default function MonthlyReport() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Monthly Report</h1>
-        <p className="text-slate-500 text-sm">
-          {monthLabel} {calendarYear} · Profit &amp; Loss for the month
-        </p>
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">Monthly Report</h1>
+          <p className="text-slate-500 text-sm">
+            {monthLabel} {calendarYear} · Profit &amp; Loss for the month
+          </p>
+        </div>
+        <ExportButtons
+          endpoints={{
+            excel: '/api/export/excel/monthly',
+            pdf: '/api/export/pdf/monthly',
+          }}
+          params={{ month, year: calendarYear }}
+          filename={`ElHotelMIS_Monthly_${calendarYear}-${String(month).padStart(2, '0')}`}
+        />
       </div>
 
       <div className="card grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl">
