@@ -7,9 +7,28 @@ from ..auth import require_role
 router = APIRouter(prefix="/api/expense-ledgers", tags=["expense-ledgers"])
 
 
-@router.get("/", response_model=list[schemas.ExpenseLedgerOut])
+@router.get("/")
 def list_ledgers(db: Session = Depends(get_db)):
-    return db.query(models.ExpenseLedger).order_by(models.ExpenseLedger.name).all()
+    """Return ledgers with their expense head nested, so the frontend
+    can group them under the correct header."""
+    q = (db.query(models.ExpenseLedger, models.ExpenseHead)
+         .join(models.ExpenseHead,
+               models.ExpenseLedger.expense_head_id == models.ExpenseHead.id,
+               isouter=True)
+         .order_by(models.ExpenseHead.name, models.ExpenseLedger.name))
+    return [
+        {
+            "id": l.id,
+            "name": l.name,
+            "nature": l.nature,
+            "expense_head_id": l.expense_head_id,
+            "expense_head": {
+                "id": h.id,
+                "name": h.name,
+            } if h else None,
+        }
+        for l, h in q.all()
+    ]
 
 
 @router.post("/", response_model=schemas.ExpenseLedgerOut)
@@ -50,7 +69,6 @@ def update_ledger_nature(
     db: Session = Depends(get_db),
     user=Depends(require_role("admin", "accounts")),
 ):
-    """Quick endpoint to change only the nature (Fixed / Variable)."""
     nature = payload.get("nature")
     if nature not in ("Fixed", "Variable"):
         raise HTTPException(400, "nature must be 'Fixed' or 'Variable'")
