@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import api from '../api'
+import ExportButtons from '../components/ExportButtons'
 
-// FY month order: Apr → Mar
 const FY_MONTHS = [
   { num: 4, label: 'April' },
   { num: 5, label: 'May' },
@@ -53,11 +53,8 @@ export default function Comparison() {
   const defaultFy =
     now.getMonth() + 1 >= 4 ? now.getFullYear() : now.getFullYear() - 1
 
-  // Period A (default: last month)
   const [fyA, setFyA] = useState(defaultFy)
   const [monthA, setMonthA] = useState(now.getMonth() === 0 ? 12 : now.getMonth())
-
-  // Period B (default: current month)
   const [fyB, setFyB] = useState(defaultFy)
   const [monthB, setMonthB] = useState(now.getMonth() + 1)
 
@@ -136,11 +133,24 @@ export default function Comparison() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Comparison</h1>
-        <p className="text-slate-500 text-sm">
-          Two months side by side — all branches
-        </p>
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">Comparison</h1>
+          <p className="text-slate-500 text-sm">
+            Two months side by side — all branches
+          </p>
+        </div>
+        <ExportButtons
+          endpoints={{
+            excel: '/api/export/excel/comparison',
+            pdf: '/api/export/pdf/comparison',
+          }}
+          params={{
+            month_a: monthA, year_a: yearA,
+            month_b: monthB, year_b: yearB,
+          }}
+          filename={`ElHotelMIS_Comparison_${yearA}-${String(monthA).padStart(2, '0')}_vs_${yearB}-${String(monthB).padStart(2, '0')}`}
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -315,4 +325,4 @@ export default function Comparison() {
       </div>
     </div>
   )
-}
+                               }
